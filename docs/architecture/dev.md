@@ -23,6 +23,7 @@ pricing are server-side. **No clinical evaluator runs in a browser.**
 - a hardcoded brand value, price, or piece of compliance copy
 - a tracking tag of any kind
 - a locally-computed clinical or pricing decision
+- a locally-computed task ranking (the action stack is server-ranked — see `ux/dev.md`)
 - a payment charge path for prescription items
 
 ## Configuration from the admin

@@ -20,6 +20,11 @@ Separating the applications removes that structurally rather than relying on eve
 operator not to paste a tag. The two also have opposite caching postures (cached vs never-cached),
 opposite indexing, and independent release cadence.
 
+## Mobile-first
+
+**390 × 812 is the design baseline**, not a breakpoint to degrade into. Desktop reflows the same
+components and the same five destinations. See [`docs/ux/dev.md`](docs/ux/dev.md).
+
 ## Non-negotiables
 
 - **No browser tracking tags. Ever.** No pixel, no tag manager, no session replay, no chat widget.

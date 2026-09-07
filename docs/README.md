@@ -8,6 +8,7 @@ gitignored. Do not add them here.
 
 | Area | Developer | Operator |
 |---|---|---|
+| [Interface & IA](ux/dev.md) | mobile-first layout, navigation, the action stack | — |
 | [Architecture](architecture/dev.md) | structure, boundaries, what this app may not own | — |
 | [Security](security/dev.md) | session, scoping, the rules that cannot be relaxed | — |
 | [Approvals](approvals/dev.md) | the provider-added item accept/decline flow | [operator guide](approvals/user.md) |
