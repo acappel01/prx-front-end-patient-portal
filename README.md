@@ -1,12 +1,15 @@
 # prx-front-end-patient-portal
 
-Authenticated patient portal for the Prescribe-Rx platform. One of three applications:
+**White-label patient portal.** For groups running their own frontend and consuming the platform
+API only — it **replaces** the portal shipped by the clinical provider's own product.
+
+One of three applications:
 
 | App | Role |
 |---|---|
 | **Admin** (Laravel + Filament) | Source of truth — clinical records, transactions, integrations, attribution |
 | **Storefront** | Anonymous public commerce and marketing |
-| **Patient portal** (this repo) | Authenticated clinical views, approvals and account management |
+| **Patient portal** (this repo) | Authenticated clinical views, approvals and account management — API-only, brand-neutral |
 
 ## Why this is a separate application
 
@@ -19,6 +22,13 @@ would execute on pages rendering prescriptions and patient identifiers.
 Separating the applications removes that structurally rather than relying on every future
 operator not to paste a tag. The two also have opposite caching postures (cached vs never-cached),
 opposite indexing, and independent release cadence.
+
+## API-only is a constraint, not a detail
+
+Any capability that exists only inside a provider's own server-rendered portal is unavailable to
+a white-label group unless there is an API for it. **Every such gap is an adoption blocker**, and
+the fix is an endpoint — never a workaround in this app. See the API-parity note in
+[`docs/ux/dev.md`](docs/ux/dev.md).
 
 ## Mobile-first
 
