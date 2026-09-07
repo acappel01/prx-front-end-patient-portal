@@ -34,3 +34,42 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent tooling and agent-authored working notes — NEVER commit these.
+#
+# /docs        = SHIPPED documentation only (dev + user guides). Tracked.
+# /agent-docs  = plans, runbooks, pickup/handoff, memory, analysis. Local only.
+#
+# Rationale: agent working notes carry commercial strategy, integration weak
+# points and half-formed plans. They are not product documentation and must not
+# ship to a client or a public mirror.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Agent working notes — the ONLY home for plans/runbooks/pickup/memory
+/agent-docs/
+
+# Agent configuration and instruction files (all common variants + casings)
+.claude/
+.codex/
+.gemini/
+.cursor/
+.aider*
+.github/copilot-instructions.md
+CLAUDE.md
+claude.md
+Claude.md
+CLAUDE.local.md
+AGENT.md
+agent.md
+Agent.md
+AGENTS.md
+agents.md
+Agents.md
+GEMINI.md
+gemini.md
+Gemini.md
+CODEX.md
+codex.md
+.mcp.json
+.claude-*
