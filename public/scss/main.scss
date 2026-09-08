@@ -1,0 +1,311 @@
+// Portal stylesheet.
+//
+// Mobile-first: 390 × 812 is the design baseline, and the desktop rules below
+// are a reflow of the same components — never a second interface.
+//
+// Every colour here reads a custom property set by the admin's theme. There is
+// no literal brand colour in this file. Greys are structural rather than brand,
+// so they carry a token but a sensible default.
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--prx-bg);
+  color: var(--prx-ink);
+  font-family: var(--prx-font-body);
+  font-size: 16px;      // never below 16px on an input — iOS zooms otherwise
+  line-height: 1.5;
+}
+
+h1, h2, h3 { font-family: var(--prx-font-display); margin: 0 0 .5rem; line-height: 1.25; }
+
+// The page title is NAVIGATION CONTEXT, not content — the tab bar has already
+// told the patient where they are. Rendered at a display size it becomes the
+// largest thing on a 390px screen and outranks the task underneath it, which
+// inverts the whole point of the action stack. Kept deliberately quiet so the
+// first CARD is the thing the eye lands on.
+h1 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: .75rem;
+}
+
+h2 { font-size: 1.0625rem; font-weight: 600; }
+
+// ── Layout frame ──────────────────────────────────────────────────────────
+
+.prx-app { min-height: 100dvh; display: flex; flex-direction: column; }
+
+.prx-main {
+  flex: 1;
+  padding: 1rem 1rem 0;
+  // Clears the tab bar plus the home indicator on a notched device. Without
+  // the safe-area term the last card sits under the gesture bar.
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  max-width: 40rem;
+  width: 100%;
+  margin-inline: auto;
+}
+
+// ── Bottom tab bar ────────────────────────────────────────────────────────
+
+.prx-tabbar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  align-items: end;
+  background: var(--prx-surface);
+  border-top: 1px solid var(--prx-line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.prx-tab {
+  // A real button/link: 44px minimum in both axes, per the touch rule.
+  min-height: 56px;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .15rem;
+  padding: .5rem .25rem;
+  border: 0;
+  background: none;
+  color: var(--prx-ink-3);
+  font: inherit;
+  font-size: .6875rem;
+  text-decoration: none;
+  cursor: pointer;
+
+  &[aria-current='page'] { color: var(--prx-brand); font-weight: 600; }
+
+  &__glyph { font-size: 1.25rem; line-height: 1; }
+}
+
+// The raised centre action. It is the consult path, and it is one tap from
+// every screen on purpose — it was a submenu item in the design this replaces.
+.prx-tab--raised {
+  .prx-tab__glyph {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-top: -22px;
+    border-radius: 50%;
+    background: var(--prx-brand);
+    color: var(--prx-brand-ink);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
+  }
+}
+
+// ── Action stack ──────────────────────────────────────────────────────────
+
+.prx-stack__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 1.25rem 0 .5rem;
+  font-size: .75rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--prx-ink-2);
+}
+
+.prx-task {
+  background: var(--prx-surface);
+  border: 1px solid var(--prx-line);
+  border-radius: .75rem;
+  padding: 1rem;
+  margin-bottom: .75rem;
+
+  // Larger than the page title on purpose. Within the stack, the task IS the
+  // content, and tier 0/1 have to win the page at a glance.
+  &__title { font-size: 1.1875rem; font-weight: 700; margin: 0 0 .35rem; line-height: 1.3; }
+  &__body  { margin: 0 0 .75rem; color: var(--prx-ink-2); font-size: .9375rem; }
+
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 1.1rem;
+    border-radius: .5rem;
+    border: 1px solid var(--prx-line);
+    background: var(--prx-surface);
+    color: var(--prx-ink);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  &__chip {
+    display: inline-block;
+    padding: .1rem .5rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+    background: var(--prx-line);
+    color: var(--prx-ink-2);
+  }
+
+  &__meter {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--prx-line);
+    margin-bottom: .75rem;
+    overflow: hidden;
+
+    span { display: block; height: 100%; background: var(--prx-brand); }
+  }
+}
+
+// Tier 0 — live. Solid fill, one per screen. This is the only element in the
+// portal allowed to pulse.
+.prx-task--live {
+  background: var(--prx-urgent);
+  border-color: var(--prx-urgent);
+  color: #fff;
+
+  .prx-task__body { color: rgb(255 255 255 / 85%); }
+  .prx-task__cta  { background: #fff; color: var(--prx-urgent); border-color: #fff; }
+  .prx-task__chip { background: rgb(255 255 255 / 22%); color: #fff; }
+}
+
+.prx-pulse {
+  display: inline-block;
+  width: .5rem; height: .5rem;
+  margin-right: .4rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: prx-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes prx-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .prx-pulse { animation: none; }
+}
+
+// Tier 1 — blocking. Brand border and a filled button: it is the thing to do.
+.prx-task--blocking {
+  border-color: var(--prx-brand);
+  border-width: 1.5px;
+
+  .prx-task__cta { background: var(--prx-brand); color: var(--prx-brand-ink); border-color: var(--prx-brand); }
+}
+
+// Tier 2 — time-boxed. Amber wash, outlined button, deadline as a chip.
+.prx-task--timeboxed {
+  background: var(--prx-warn-wash);
+  border-color: var(--prx-warn);
+
+  .prx-task__cta  { border-color: var(--prx-warn); color: var(--prx-warn); }
+  .prx-task__chip { background: var(--prx-warn); color: #fff; }
+}
+
+// Tier 3 — routine. One dashed row, no colour at all, because colour that
+// appears here is colour that no longer means anything at tier 0.
+.prx-task--routine {
+  background: none;
+  border-style: dashed;
+  padding: .75rem 1rem;
+  color: var(--prx-ink-2);
+}
+
+// Empty state is success, not absence.
+.prx-stack__clear {
+  background: var(--prx-surface);
+  border: 1px solid var(--prx-line);
+  border-radius: .75rem;
+  padding: 1.5rem 1.25rem;
+  text-align: center;
+  color: var(--prx-ink-2);
+
+  // An empty state that only reports absence wastes the most attention the
+  // screen will ever get. Where there is a way forward, it goes here.
+  &__action { margin-top: 1rem; }
+}
+
+// ── Progress summary ──────────────────────────────────────────────────────
+
+.prx-summary { margin-top: 1.5rem; }
+
+.prx-metric {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  flex-wrap: wrap;
+
+  &__value { font-size: 2.25rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  &__unit  { font-size: 1rem; color: var(--prx-ink-2); }
+  &__meta  { margin-left: auto; font-size: .875rem; color: var(--prx-ink-2); }
+}
+
+// ── Generic surfaces ──────────────────────────────────────────────────────
+
+.prx-card {
+  background: var(--prx-surface);
+  border: 1px solid var(--prx-line);
+  border-radius: .75rem;
+  padding: 1rem;
+  margin-bottom: .75rem;
+}
+
+.prx-rows { list-style: none; margin: 0; padding: 0; }
+
+.prx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 44px;
+  padding: .75rem 0;
+  border-bottom: 1px solid var(--prx-line);
+
+  &:last-child { border-bottom: 0; }
+  &__meta { color: var(--prx-ink-2); font-size: .875rem; }
+}
+
+.prx-muted { color: var(--prx-ink-2); }
+.prx-visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+// ── Desktop reflow ────────────────────────────────────────────────────────
+// The SAME five destinations and the same components. The tab bar becomes an
+// icon rail; nothing is a different interface at a different width.
+
+@media (min-width: 62em) {
+  .prx-app { flex-direction: row; }
+
+  .prx-tabbar {
+    position: sticky;
+    inset: 0 auto 0 0;
+    height: 100dvh;
+    grid-template-columns: 1fr;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: .25rem;
+    width: 6.5rem;
+    padding-top: 1.5rem;
+    border-top: 0;
+    border-right: 1px solid var(--prx-line);
+  }
+
+  .prx-tab--raised .prx-tab__glyph { margin-top: 0; }
+
+  .prx-main { padding: 2rem; padding-bottom: 2rem; }
+
+  h1 { font-size: 1.75rem; }
+}

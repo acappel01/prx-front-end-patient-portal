@@ -13,3 +13,5 @@ gitignored. Do not add them here.
 | [Security](security/dev.md) | session, scoping, the rules that cannot be relaxed | — |
 | [Approvals](approvals/dev.md) | the provider-added item accept/decline flow | [operator guide](approvals/user.md) |
 | [Tracking](tracking/dev.md) | why conversions fire server-side only | — |
+
+- [`getting-started/dev.md`](getting-started/dev.md) — stack, how to run it, where things live, how to add a screen
