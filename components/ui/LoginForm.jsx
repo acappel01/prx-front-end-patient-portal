@@ -48,22 +48,30 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="prx-card">
-      <label htmlFor="email">Email</label>
-      <input id="email" name="email" type="email" autoComplete="username" required />
+    <form onSubmit={onSubmit} className="prx-card prx-form">
+      {/* `prx-field` rather than a bare label/input pair: without it a label
+          and its input are both inline boxes, so at 390px this rendered as
+          "Email[box]Password" with the password field beside the button. It
+          was the first screen every patient sees. */}
+      <div className="prx-field">
+        <label htmlFor="email">Email</label>
+        <input id="email" name="email" type="email" autoComplete="username" required />
+      </div>
 
-      <label htmlFor="password">Password</label>
-      <input id="password" name="password" type="password" autoComplete="current-password" required />
+      <div className="prx-field">
+        <label htmlFor="password">Password</label>
+        <input id="password" name="password" type="password" autoComplete="current-password" required />
+      </div>
 
       {/* Announced, not merely rendered — a sighted user sees the message
           appear, and a screen-reader user has to be told. */}
       {error ? (
-        <p role="alert" style={{ color: 'var(--prx-urgent)' }}>
+        <p className="prx-field__error" role="alert">
           {error}
         </p>
       ) : null}
 
-      <button type="submit" className="prx-task__cta" disabled={busy}>
+      <button type="submit" className="prx-task__cta prx-form__submit" disabled={busy}>
         {busy ? 'Signing in…' : 'Sign in'}
       </button>
     </form>

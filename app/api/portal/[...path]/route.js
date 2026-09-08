@@ -46,8 +46,20 @@ async function handle(request, context, method) {
 
   const result = await adminFetch(`${resolved}${search}`, { method, body, token });
 
+  if (result.ok) {
+    return NextResponse.json({ data: result.data, meta: result.meta }, { status: result.status });
+  }
+
   return NextResponse.json(
-    result.ok ? { data: result.data, meta: result.meta } : { message: result.message ?? 'Request failed.' },
+    {
+      message: result.message ?? 'Request failed.',
+      // Forwarded only when the admin sent one, which it does only on a 422 —
+      // where it is the field-keyed validation array a form needs to point at
+      // the input. The admin already replaces the upstream provider's message
+      // and stack with its own on every 5xx, so nothing here is a passthrough
+      // of anything the provider wrote.
+      ...(result.errors ? { errors: result.errors } : {}),
+    },
     { status: result.status }
   );
 }

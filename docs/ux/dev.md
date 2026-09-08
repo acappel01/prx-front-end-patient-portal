@@ -107,7 +107,37 @@ The portal never owns: what a task is, which tier it belongs to, or whether it i
 - **Ask for the reading rather than reporting its absence.** An empty weight tile is a prompt.
 - **Only show tools the prescription calls for.** A fixed-dose ready-to-inject prescription shows
   no reconstitution or titration UI.
-- **All copy comes from the admin**, including compliance text. Nothing user-facing is compiled in.
+- **All compliance and clinical copy comes from the admin.** Nothing that carries a claim, a
+  policy or a price is compiled in.
+- 🔴 **UI chrome strings currently ARE compiled in** — button labels, empty states, field labels,
+  error copy. Every screen in this app does it. That is a known gap, not the intent: this is a
+  white-label skeleton, so a second deployment cannot yet change "Log a reading" or translate
+  anything without a code change. Closing it needs a content layer in the admin and is an open
+  decision, not something to fix screen by screen. Do not extend it to anything clinical.
+
+## Forms
+
+- **Every control is wrapped in `.prx-field`.** A bare `<label>` and `<input>` are both inline
+  boxes, so without it they share a line: the sign-in screen rendered as `Email[box]Password`
+  with the password field beside the button, at the one width this app is designed for.
+- **Ask for the one measurement first, and fold the rest away.** Five empty inputs above the
+  button turn a ten-second action into a scroll. `/health/log` shows weight and a `<details>`
+  disclosure; a native `<details>` gets keyboard and screen-reader behaviour for free and works
+  before hydration. Give the summary a visible marker — the browser default reads as bold text,
+  not as something you can press.
+- **A disclosure opens itself when something inside it needs attention**, so a validation error
+  can never point at a field that is folded away. This must be written **imperatively** — set
+  `.open` in an effect. `<details open={...}>` writes the DOM only when the prop *changes*, so
+  after a manual collapse the element and React disagree and the same prop value is a no-op: the
+  form rejects a submission and hides the reason, which looks exactly like a button that does
+  nothing.
+- **Inputs never go below 16px**, or iOS zooms the viewport on focus and the patient is left
+  scrolling a form they can no longer see all of.
+- **One control per row**, with one exception: blood pressure, which every patient has been
+  taught to read as one number over another.
+- **Branch failure copy on the STATUS, not on success.** A rejected value and a write that
+  crashed after committing need opposite instructions, and only one of them may offer a retry.
+  See `vitals/dev.md` — the vitals endpoint does both.
 
 ## Accessibility and touch
 

@@ -7,7 +7,7 @@ import { adminFetch } from '@/lib/adminApi';
  * rather than copy-pasted into five screens where one of them will eventually
  * be missed and throw a 500 onto a clinical page.
  */
-export default async function Screen({ title, path, empty, emptyAction, children }) {
+export default async function Screen({ title, path, empty, emptyAction, action, children }) {
   const { ok, status, data } = await adminFetch(path);
 
   if (status === 401) {
@@ -35,6 +35,16 @@ export default async function Screen({ title, path, empty, emptyAction, children
   return (
     <>
       <h1>{title}</h1>
+      {/* A screen with rows on it still needs its way forward. `emptyAction`
+          only ever renders once, on the one visit where there is nothing to
+          do — after which the invitation disappears for good. */}
+      {action && rows.length > 0 ? (
+        <p className="prx-screen__action">
+          <a className="prx-task__cta" href={action.href}>
+            {action.label}
+          </a>
+        </p>
+      ) : null}
       {rows.length === 0 ? (
         <div className="prx-stack__clear">
           <p>{empty}</p>

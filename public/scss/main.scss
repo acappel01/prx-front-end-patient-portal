@@ -276,10 +276,179 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 }
 
 .prx-muted { color: var(--prx-ink-2); }
+
+// Headings that receive focus programmatically after an outcome replaces a
+// form. They are not tab stops, so the ring would only ever say "you were
+// moved here" — which the announcement has already said.
+h2[tabindex='-1']:focus { outline: none; }
 .prx-visually-hidden {
   position: absolute; width: 1px; height: 1px;
   margin: -1px; padding: 0; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+// ── Forms ─────────────────────────────────────────────────────────────────
+// One control per row on a 390px screen, with exactly one exception: blood
+// pressure, which every patient has been taught to read as one number over
+// another. Everything else stacks, because side-by-side targets under a thumb
+// is where mis-taps come from.
+
+.prx-lede { margin: -.25rem 0 1rem; font-size: .9375rem; }
+
+.prx-screen__action { margin: 0 0 1rem; }
+
+.prx-field {
+  margin-bottom: 1rem;
+
+  label {
+    display: block;
+    margin-bottom: .3rem;
+    font-size: .875rem;
+    font-weight: 600;
+  }
+
+  input,
+  textarea {
+    display: block;
+    width: 100%;
+    min-height: 44px;
+    padding: .6rem .75rem;
+    border: 1px solid var(--prx-line);
+    border-radius: .5rem;
+    background: var(--prx-bg);
+    color: var(--prx-ink);
+    font: inherit;
+    // Inherited from body, but restated: an input under 16px makes iOS Safari
+    // zoom the viewport on focus and the patient then scrolls a form they
+    // can no longer see the whole of.
+    font-size: 16px;
+  }
+
+  textarea { resize: vertical; }
+
+  input:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--prx-brand);
+    outline-offset: 1px;
+  }
+
+  input[aria-invalid='true'],
+  textarea[aria-invalid='true'] { border-color: var(--prx-urgent); }
+
+  // Number inputs get spinners that sit under the same thumb as the value.
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  }
+
+  &__error {
+    margin: .3rem 0 0;
+    font-size: .8125rem;
+    color: var(--prx-urgent);
+  }
+}
+
+// A field error immediately before the full-width submit button has nothing
+// between it and a large black rectangle, and reads as part of it.
+.prx-field__error + .prx-form__submit { margin-top: .75rem; }
+
+.prx-form {
+  &__error {
+    margin: 0 0 1rem;
+    padding: .6rem .75rem;
+    border-radius: .5rem;
+    background: var(--prx-warn-wash);
+    border: 1px solid var(--prx-warn);
+    font-size: .875rem;
+  }
+
+  // Full width: it is the only action on the screen, and a phone keyboard has
+  // just vacated the bottom half of it.
+  &__submit {
+    width: 100%;
+    background: var(--prx-brand);
+    color: var(--prx-brand-ink);
+    border-color: var(--prx-brand);
+
+    &[disabled] { opacity: .6; cursor: default; }
+  }
+}
+
+// Progressive disclosure for the measurements most patients are not taking
+// today. Native <details>: keyboard and screen-reader behaviour for free, and
+// it works before hydration.
+.prx-disclosure {
+  margin-bottom: 1rem;
+
+  summary {
+    // A summary is a control, so it gets a control's target — and it gets a
+    // control's LOOK. Left to the browser default it renders as bold body
+    // text with a marker the brand colour can swallow, and it stops reading
+    // as something you can press at all.
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 44px;
+    padding: .25rem 0;
+    color: var(--prx-brand);
+    font-size: .9375rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    // The default triangle sits outside the flex row and misaligns it.
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+  }
+
+  &__marker {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+
+    // A plus that becomes a minus. Two bars, one rotated; the rotation is the
+    // whole animation, so reduced-motion has nothing to suppress.
+    &::before,
+    &::after {
+      content: '';
+      grid-area: 1 / 1;
+      width: 11px;
+      height: 1.5px;
+      background: currentColor;
+    }
+
+    &::after { transform: rotate(90deg); transition: transform .15s ease; }
+  }
+
+  &[open] &__marker::after { transform: rotate(0deg); }
+
+  &[open] summary { margin-bottom: .75rem; }
+
+  summary:focus-visible { outline: 2px solid var(--prx-brand); outline-offset: 2px; }
+}
+
+.prx-fieldset {
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+
+  legend { padding: 0; margin-bottom: .3rem; font-size: .875rem; font-weight: 600; }
+}
+
+.prx-field-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+  align-items: start;
+
+  .prx-field { margin-bottom: 0; }
 }
 
 // ── Desktop reflow ────────────────────────────────────────────────────────
