@@ -46,6 +46,30 @@ export default async function HomePage() {
     );
   }
 
+  // `linked: false` is a valid account with zero clinical visibility — the
+  // normal state between signing up and finishing intake. Rendering the usual
+  // empty stack here would tell someone with a completed consultation that
+  // they have nothing to do, which is both wrong and the exact moment the
+  // product loses them. It is the one thing standing between this account and
+  // everything, so it gets the screen rather than a row on it.
+  if (data?.linked === false) {
+    return (
+      <>
+        <h1>{data?.greeting ?? 'Your care'}</h1>
+        <div className="prx-task prx-task--blocking">
+          <h2 className="prx-task__title">Connect your medical record</h2>
+          <p className="prx-task__body">
+            Your consultation created a record with your provider. Connect it once and your care,
+            prescriptions and results appear here.
+          </p>
+          <a className="prx-task__cta" href="/connect">
+            Connect it now
+          </a>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <h1>{data?.greeting ?? 'Your care'}</h1>
