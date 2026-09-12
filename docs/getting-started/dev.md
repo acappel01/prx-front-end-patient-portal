@@ -27,7 +27,8 @@ present and is absent in production.
 |---|---|
 | `app/layout.js` | Universal shell. Injects the admin's theme as CSS custom properties. No script tag, no third-party host. |
 | `app/(portal)/` | The authenticated tree. Its layout is the single session gate. |
-| `app/login/` | The only anonymous route. |
+| `app/login/` | Anonymous. Bounces to `/` only a session the admin still accepts (`/patient/auth/me`), never on the cookie's signature alone. |
+| `app/claim/[token]/` | Anonymous. Lands a claim link; signs in in place. |
 | `app/api/session/` | Sign in and out. Exchanges a credential for an admin token server-side. |
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `lib/` | Server-only modules. `adminApi`, `session`, `portalProxy`, `theme`, `destinations`. |

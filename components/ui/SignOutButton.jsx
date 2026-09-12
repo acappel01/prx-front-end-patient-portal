@@ -20,7 +20,7 @@ export default function SignOutButton() {
   }
 
   return (
-    <p className="prx-screen__action">
+    <p className="prx-signout">
       <button type="button" className="prx-task__cta" onClick={signOut} disabled={busy}>
         {busy ? 'Signing out…' : 'Sign out'}
       </button>

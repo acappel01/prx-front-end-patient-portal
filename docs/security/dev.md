@@ -54,6 +54,12 @@ control that is guaranteed to fail.
 - `Referrer-Policy: no-referrer` on `/claim/*`, whose URL carries a credential rather than an
   identifier. `same-origin` would repeat it as the Referer on that page's own requests.
 - No third-party script, font, or asset host on an authenticated page.
+- **A signed cookie proves we minted it, not that the admin still honours it.** A claim revokes
+  other sessions, so a validly signed cookie can hold a dead token. `/login` asks `/patient/auth/me`
+  before bouncing to `/` — trusting the signature there was an inescapable
+  `/login` → `/` → "Session expired" → `/login` loop with no way to sign in. The `(portal)` layout
+  must **not** make the same call: `/me` is behind the admin's `auth` limiter (10/min per IP), so a
+  call per page view locks a patient out of signing in. Screens under it turn a 401 into a link.
 - **Every admin call carries the patient's address and browser** (`lib/adminApi.js`). The admin
   sees this server as the caller, so without it every audit IP is the portal host and every
   per-IP rate limit is one shared bucket. Exactly **one** `X-Forwarded-For` value is sent: the

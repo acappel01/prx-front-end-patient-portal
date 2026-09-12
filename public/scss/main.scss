@@ -297,6 +297,10 @@ h2[tabindex='-1']:focus { outline: none; }
 
 .prx-screen__action { margin: 0 0 1rem; }
 
+// Sign out sits BELOW a screen's rows or empty card, where the action slot's
+// zero top margin would leave it flush against the card border.
+.prx-signout { margin: 1.5rem 0 1rem; }
+
 .prx-connect__help { margin-top: 1rem; font-size: .875rem; }
 
 .prx-field {

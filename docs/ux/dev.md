@@ -50,7 +50,7 @@ A persistent bottom tab bar with a **raised centre action** for the consult path
 - **Care** — active treatment, appointments, consults
 - **Talk** — raised centre button; the consult path, never a submenu item
 - **Health** — progress, goals, biomarkers and trends
-- **Record** — orders, vitals, documents, profile, payment
+- **Record** — orders, vitals, documents, profile, payment, sign out
 
 Desktop reflows the **same components** and the **same five destinations**; the tab bar becomes
 an icon rail. Never a different IA per breakpoint.
