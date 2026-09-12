@@ -54,6 +54,14 @@ control that is guaranteed to fail.
 - `Referrer-Policy: no-referrer` on `/claim/*`, whose URL carries a credential rather than an
   identifier. `same-origin` would repeat it as the Referer on that page's own requests.
 - No third-party script, font, or asset host on an authenticated page.
+- **Every admin call carries the patient's address and browser** (`lib/adminApi.js`). The admin
+  sees this server as the caller, so without it every audit IP is the portal host and every
+  per-IP rate limit is one shared bucket. Exactly **one** `X-Forwarded-For` value is sent: the
+  rightmost incoming entry, which the reverse proxy in front appended. Entries to its left are
+  caller-supplied and dropped. The admin must list this host in `TRUSTED_PROXIES` or it ignores
+  the header. A loopback value is logged — it means a request bypassed the reverse proxy. Put a
+  CDN in front and the true client is no longer the rightmost entry: change the extraction and
+  the admin's trusted proxies together.
 
 ## Payment data
 
