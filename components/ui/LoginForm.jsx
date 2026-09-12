@@ -10,7 +10,7 @@ import { useState } from 'react';
  * admin-issued token server-side and returns only a Set-Cookie. No token, no
  * chart id and no clinical value ever reaches this component.
  */
-export default function LoginForm() {
+export default function LoginForm({ stayOnPage = false }) {
   const router = useRouter();
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -43,8 +43,18 @@ export default function LoginForm() {
     // Full navigation rather than a client push: the authenticated layout
     // resolves the session server-side, and a soft push can render it from a
     // cached RSC payload taken before the cookie existed.
+    //
+    // `stayOnPage` re-renders the current URL signed in, for a screen that asks
+    // for a session partway through (a claim link). It deliberately does NOT
+    // take a return URL: that page's URL carries a token, and a `?next=` would
+    // copy it into a second URL for no gain.
     router.refresh();
-    window.location.assign('/');
+
+    if (stayOnPage) {
+      window.location.reload();
+    } else {
+      window.location.assign('/');
+    }
   }
 
   return (

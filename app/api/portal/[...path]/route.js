@@ -47,7 +47,13 @@ async function handle(request, context, method) {
   const result = await adminFetch(`${resolved}${search}`, { method, body, token });
 
   if (result.ok) {
-    return NextResponse.json({ data: result.data, meta: result.meta }, { status: result.status });
+    // `message` rides a success too: the claim-link request answers 202 with
+    // the one sentence a patient sees whether or not an order matched, and a
+    // screen inventing its own copy would be free to drift from that promise.
+    return NextResponse.json(
+      { data: result.data, meta: result.meta, ...(result.message ? { message: result.message } : {}) },
+      { status: result.status }
+    );
   }
 
   return NextResponse.json(

@@ -1,18 +1,16 @@
-import ConnectRecordForm from '@/components/account/ConnectRecordForm';
+import RequestClaimLink from '@/components/account/RequestClaimLink';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Connect a medical record to this account.
  *
- * Reached from Home when `linked` is false, and directly by a link carrying
- * `?order=` — which is how a patient should normally arrive, since the
- * reference is a uuid nobody is going to type from memory.
+ * Reached from Home when `linked` is false. The patient proves the order is
+ * theirs by receiving an email at the address it was placed under — there is no
+ * order reference to type, and no `?order=` to carry, because an order uuid is
+ * not proof of anything.
  */
-export default async function ConnectPage({ searchParams }) {
-  const params = await searchParams;
-  const order = typeof params?.order === 'string' ? params.order : '';
-
+export default function ConnectPage() {
   return (
     <>
       <h1>Connect your record</h1>
@@ -20,10 +18,13 @@ export default async function ConnectPage({ searchParams }) {
         Your consultation created a medical record. Connect it once and your care, prescriptions
         and results appear here.
       </p>
-      <ConnectRecordForm initialReference={order} />
+      <p className="prx-muted prx-lede">
+        We will email a link to the address you used when you ordered.
+      </p>
+      <RequestClaimLink />
       <p className="prx-muted prx-connect__help">
-        The order reference is in your confirmation email. If you have just finished a consultation
-        it can take a few minutes to become available.
+        If you have just finished a consultation it can take a few minutes before a link can be
+        sent.
       </p>
     </>
   );

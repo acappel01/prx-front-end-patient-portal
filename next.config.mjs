@@ -21,6 +21,15 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
         ],
       },
+      {
+        // A claim page carries a single-use token in its path. `same-origin`
+        // still sends that URL as the Referer on every same-origin fetch the
+        // page makes — including the sign-in and the claim itself — and the
+        // access log records Referers. Later entries override earlier ones
+        // for the same key.
+        source: '/claim/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
     ];
   },
 };
