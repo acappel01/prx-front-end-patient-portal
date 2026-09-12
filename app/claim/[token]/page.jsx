@@ -1,4 +1,5 @@
 import ClaimRecordForm from '@/components/account/ClaimRecordForm';
+import ClaimSignIn from '@/components/account/ClaimSignIn';
 import LoginForm from '@/components/ui/LoginForm';
 import { adminFetch, deploymentConfig } from '@/lib/adminApi';
 import { sessionToken } from '@/lib/session';
@@ -40,13 +41,11 @@ export default async function ClaimPage({ params }) {
   }
 
   if (!(await sessionToken())) {
+    // Often NOT signed out: arriving from a mail app, the Strict session cookie
+    // is withheld. ClaimSignIn retries once from this origin before asking.
     return (
       <Shell brand={brand}>
-        <h2>Connect your record</h2>
-        <p className="prx-muted prx-lede">
-          Sign in to the account you created, then connect your record from this page.
-        </p>
-        <LoginForm stayOnPage />
+        <ClaimSignIn lede="Sign in to the account you created, then connect your record from this page." />
       </Shell>
     );
   }

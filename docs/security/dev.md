@@ -19,6 +19,11 @@ this screen pair must keep:
   page renders a button; only the POST consumes.
 - **Never carry the token into a second URL** — no `?next=`, no redirect. The claim page sits
   outside the authenticated layout and signs in in place (`LoginForm stayOnPage`).
+- **A visitor arriving from a mail app usually looks signed out when they are not.** The session
+  cookie is `SameSite=Strict`, which a browser withholds on a navigation that started on another
+  site. `ClaimSignIn` re-requests the same URL once from this origin (same-site, so the cookie is
+  sent) before showing the form, guarded by a short-lived `sessionStorage` flag so it cannot loop.
+  Do not "fix" this by relaxing the cookie to `Lax`.
 - **The token goes in a body, with `referrerPolicy: 'no-referrer'`**, and the page is served with
   `Referrer-Policy: no-referrer`. A deployment's reverse proxy must keep `/claim/` request lines
   and claim-page Referers out of its access log — a `combined` log records both.
