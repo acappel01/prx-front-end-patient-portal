@@ -1,4 +1,5 @@
 import Screen from '@/components/ui/Screen';
+import SignOutButton from '@/components/ui/SignOutButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,24 +13,30 @@ export const dynamic = 'force-dynamic';
  *
  * Rows are keyed by an order NUMBER, never an internal identifier — a chart
  * keyed by ENC- ids is a clinician's tool shown to a patient.
+ *
+ * Sign out lives here, under Operate: Record is the account destination, and
+ * the portal had no way to end a session at all.
  */
 export default function RecordPage() {
   return (
-    <Screen title="Your record" path="/patient/orders" empty="No orders yet.">
-      {(rows) => (
-        <ul className="prx-rows">
-          {rows.map((order) => (
-            <li className="prx-row" key={order.id}>
-              <span>
-                {order.order_number}
-                <br />
-                <span className="prx-row__meta">{order.shipping_status ?? order.workflow_status}</span>
-              </span>
-              <span className="prx-row__meta">{order.grand_total}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Screen>
+    <>
+      <Screen title="Your record" path="/patient/orders" empty="No orders yet.">
+        {(rows) => (
+          <ul className="prx-rows">
+            {rows.map((order) => (
+              <li className="prx-row" key={order.id}>
+                <span>
+                  {order.order_number}
+                  <br />
+                  <span className="prx-row__meta">{order.shipping_status ?? order.workflow_status}</span>
+                </span>
+                <span className="prx-row__meta">{order.grand_total}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Screen>
+      <SignOutButton />
+    </>
   );
 }
