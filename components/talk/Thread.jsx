@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import LocalTime from '@/components/ui/LocalTime';
 
@@ -31,6 +31,15 @@ import LocalTime from '@/components/ui/LocalTime';
  * clear answer, nothing is re-sent automatically — the provider has no
  * idempotency on this call, so a retry could post it twice. The draft is kept
  * and the next poll shows whether it went through.
+ *
+ * ── Older messages ───────────────────────────────────────────────────────────
+ *
+ * The first page (newest 50) arrives with where it sits. "Load older" asks for
+ * the next page by NUMBER — the provider has no `before` cursor — and those
+ * pages are offset-based, so a message that arrived since shifts every row one
+ * place older and the next page repeats one. Merging by id absorbs that. The
+ * reader's place is kept: the list grows above them, so the window is moved by
+ * exactly the height that was added.
  */
 
 const ACTIVE_MS = 15_000;
@@ -45,8 +54,20 @@ function merge(existing, incoming) {
   return [...existing, ...incoming.filter((message) => !seen.has(message.id))];
 }
 
-export default function Thread({ conversationId, initialMessages, initialCursor }) {
+function mergeOlder(existing, older) {
+  const seen = new Set(existing.map((message) => message.id));
+
+  return [...older.filter((message) => !seen.has(message.id)), ...existing];
+}
+
+export default function Thread({ conversationId, initialMessages, initialCursor, initialPage = 1, lastPage = 1 }) {
   const [messages, setMessages] = useState(initialMessages);
+  const [page, setPage] = useState(initialPage);
+  const [pages, setPages] = useState(lastPage);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [olderNotice, setOlderNotice] = useState(null);
+  // Document height before older messages were prepended; consumed once.
+  const heightBefore = useRef(null);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState(null);
@@ -69,7 +90,7 @@ export default function Thread({ conversationId, initialMessages, initialCursor 
     polling.current = true;
 
     try {
-      for (let page = 0; page < 5; page++) {
+      for (let round = 0; round < 5; round++) {
         const response = await fetch(`${base}?after=${encodeURIComponent(cursor.current)}&per_page=50`, { cache: 'no-store' }).catch(() => null);
 
         if (response?.status === 401) {
@@ -156,9 +177,63 @@ export default function Thread({ conversationId, initialMessages, initialCursor 
     };
   }, []);
 
+  // Follow the NEWEST message, not the count: loading older messages grows the
+  // list too, and must not throw the reader to the bottom.
+  const newestId = messages.at(-1)?.id;
+
   useEffect(() => {
     listEnd.current?.scrollIntoView({ block: 'end' });
-  }, [messages.length]);
+  }, [newestId]);
+
+  useLayoutEffect(() => {
+    if (heightBefore.current === null) return;
+
+    window.scrollBy(0, document.documentElement.scrollHeight - heightBefore.current);
+    heightBefore.current = null;
+  }, [messages]);
+
+  async function loadOlder() {
+    if (loadingOlder || page >= pages) return;
+
+    setLoadingOlder(true);
+    setOlderNotice(null);
+    lastInteraction.current = Date.now();
+
+    const next = page + 1;
+    const response = await fetch(`${base}?page=${next}&per_page=50`, { cache: 'no-store' }).catch(() => null);
+
+    if (response?.status === 401) {
+      window.location.assign('/login');
+
+      return;
+    }
+
+    const payload = await response?.json().catch(() => null);
+
+    if (response?.status === 403 && payload?.code === 'two_factor_setup_required') {
+      window.location.assign('/record/security?required=1');
+
+      return;
+    }
+
+    if (!alive.current) return;
+
+    setLoadingOlder(false);
+
+    if (!response?.ok || !Array.isArray(payload?.data)) {
+      setOlderNotice('We couldn’t load older messages. Please try again.');
+
+      return;
+    }
+
+    // Newest first from the provider; this list reads oldest first.
+    const older = payload.data.slice().reverse();
+
+    heightBefore.current = document.documentElement.scrollHeight;
+    setMessages((current) => mergeOlder(current, older));
+    setPage(payload.meta?.current_page ?? next);
+    setPages(payload.meta?.last_page ?? next);
+  }
 
   function resume() {
     lastInteraction.current = Date.now();
@@ -214,6 +289,19 @@ export default function Thread({ conversationId, initialMessages, initialCursor 
 
   return (
     <>
+      {page < pages ? (
+        <p className="prx-thread__older">
+          <button type="button" className="prx-link" onClick={loadOlder} disabled={loadingOlder}>
+            {loadingOlder ? 'Loading…' : 'Load older messages'}
+          </button>
+        </p>
+      ) : null}
+      {olderNotice ? (
+        <p className="prx-field__error prx-thread__older" role="alert">
+          {olderNotice}
+        </p>
+      ) : null}
+
       <ol className="prx-thread" role="log" aria-label="Messages">
         {messages.length === 0 ? <li className="prx-thread__empty prx-muted">No messages yet. Say hello below.</li> : null}
         {messages.map((message) => (

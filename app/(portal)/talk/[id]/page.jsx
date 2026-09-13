@@ -10,7 +10,8 @@ const UUID = /^[0-9a-fA-F-]{36}$/;
 
 /**
  * One conversation. The first page is read here, server-side (newest first from
- * the provider, reversed for reading); new messages are polled by Thread.
+ * the provider, reversed for reading); new messages are polled by Thread, and
+ * older pages are fetched by it on request (`meta` says how many there are).
  * The provider answers 404 both for a conversation that doesn't exist and for
  * one this patient isn't part of.
  */
@@ -58,7 +59,13 @@ export default async function ConversationPage({ params }) {
     <>
       <p className="prx-back"><a href="/talk">← Conversations</a></p>
       <h1>{subject ?? 'Messages'}</h1>
-      <Thread conversationId={id} initialMessages={messages} initialCursor={initialCursor} />
+      <Thread
+        conversationId={id}
+        initialMessages={messages}
+        initialCursor={initialCursor}
+        initialPage={page.meta?.current_page ?? 1}
+        lastPage={page.meta?.last_page ?? 1}
+      />
     </>
   );
 }

@@ -344,7 +344,8 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 
   &__empty { padding: 1rem 0; }
   &__end { height: 1px; }
-  &__paused { text-align: center; margin: 0 0 .75rem; }
+  &__paused,
+  &__older { text-align: center; margin: 0 0 .75rem; }
 }
 
 .prx-bubble {

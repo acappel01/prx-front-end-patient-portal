@@ -29,6 +29,23 @@ export default async function Screen({ title, path, empty, emptyAction, action, 
     );
   }
 
+  // A signed-in account with no medical record linked yet is the normal state
+  // between signing up and connecting, not a fault. Keyed on the admin's code,
+  // not the status: the clinical provider's own conflicts are 409s too.
+  if (status === 409 && code === 'no_linked_chart') {
+    return (
+      <>
+        <h1>{title}</h1>
+        <p className="prx-muted">Connect your medical record, and this will fill in from your care.</p>
+        <p>
+          <a className="prx-task__cta" href="/connect">
+            Connect your record
+          </a>
+        </p>
+      </>
+    );
+  }
+
   if (!ok) {
     return (
       <>

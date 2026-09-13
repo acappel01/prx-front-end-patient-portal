@@ -17,6 +17,17 @@ the newest message id to `components/talk/Thread.jsx` as the cursor. Thread then
   replaces it with an id, which cannot.
 - New messages are merged by id, so a message this tab sent and the poll that returns it appear once.
 
+## Older messages
+
+The first page arrives with `meta: {current_page, last_page}`; when there is more, the thread shows
+**Load older messages** above the list. It asks `?page=<n>&per_page=50` — page numbers, because the
+provider has no `before` cursor — reverses the page for reading and prepends it, merged by id. Those
+pages are **offset-based**: a message that arrived since the first page shifts every row one place
+older, so the next page repeats one; the id merge absorbs it. The window is moved by exactly the height
+that was added, so the reader keeps their place, and the thread follows the **newest** message rather
+than the count, so loading older ones never scrolls to the bottom. A failed load says so and leaves the
+button; a 401 goes to sign-in.
+
 ## Cadence
 
 | Situation | Poll |
@@ -47,9 +58,9 @@ returns the existing one, and goes there. The provider finds encounters only on 
 
 ## Known limits
 
-- **Ours:** the thread shows the latest 50 messages; there is no "load older" yet (the admin's client
-  drops the provider's pagination meta). Opening a thread also reads the conversation list for its
-  subject — one extra provider call.
+- **Ours:** opening a thread also reads the conversation list for its subject — one extra provider
+  call. "Load older" has been checked against the provider's pagination live, but the button itself
+  only appears past 50 messages, and no test thread is that long yet.
 
 ## Known upstream gaps
 

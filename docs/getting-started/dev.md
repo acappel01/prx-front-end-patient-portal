@@ -68,6 +68,8 @@ reads is storing PHI, so the available performance lever is fan-out reduction, n
 
 1. Put it under `app/(portal)/`. The layout gates the session; do not re-check it.
 2. Fetch through `adminApi` in a server component. Never `fetch` the admin from a client one.
-3. Handle three states — 401 as re-authentication, a failure as a calm empty state, and success.
-   `components/ui/Screen.jsx` does all three; use it unless the screen genuinely differs.
+3. Handle four states — 401 as re-authentication, `409 {code: "no_linked_chart"}` as "connect your
+   record" (an account with no medical record yet; key on the code, since the provider's own
+   conflicts are 409s too), a failure as a calm empty state, and success.
+   `components/ui/Screen.jsx` does all four; use it unless the screen genuinely differs.
 4. An empty state asks for the thing that would fill it. It never reports its own absence.

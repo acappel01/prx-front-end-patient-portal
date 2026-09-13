@@ -18,7 +18,7 @@ export default async function GoalPage() {
   if (status === 401) redirect('/login');
   if (status === 403 && code === 'two_factor_setup_required') redirect('/record/security?required=1');
 
-  if (status === 409) {
+  if (status === 409 && code === 'no_linked_chart') {
     return (
       <>
         <h1>Your weight goal</h1>

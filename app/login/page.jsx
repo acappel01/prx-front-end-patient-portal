@@ -21,9 +21,11 @@ export default async function LoginPage({ searchParams }) {
   // This is the escape hatch, so it must always render: an unreachable admin
   // (adminFetch throws on a network failure) shows the form, not a 500.
   //
-  // Do NOT copy this check into the (portal) layout. `/patient/auth/me` sits
-  // behind the admin's `auth` limiter (10/min per IP), and one call per page
-  // view would lock a patient out of signing in after ten taps.
+  // Do NOT copy this check into the (portal) layout. A call per page view is
+  // an extra admin round-trip on every navigation and spends the patient's
+  // per-account API budget (120/min) for nothing the screens don't already
+  // learn from their own 401s. (It used to sit behind the sign-in limiter too;
+  // since 2026-09-13 it does not.)
   if (await sessionToken()) {
     let live = false;
     try {

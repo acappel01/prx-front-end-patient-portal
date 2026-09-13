@@ -36,7 +36,19 @@ export async function POST(request) {
       // after checking the password, and only for this account.
       ...(deviceToken ? { trusted_device_token: deviceToken } : {}),
     },
-  });
+  }).catch(() => null);
+
+  if (!result) {
+    return NextResponse.json({ message: 'We couldn’t reach the server. Try again in a moment.' }, { status: 503 });
+  }
+
+  // The sign-in limiter is per network address, never per account, so saying
+  // so reveals nothing about whether the address belongs to a patient. Folding
+  // it into "did not match" sent people back to retype a correct password
+  // into a limiter that was still counting.
+  if (result.status === 429) {
+    return NextResponse.json({ message: 'Too many sign-in attempts from this network. Wait a minute, then try again.' }, { status: 429 });
+  }
 
   // Two-step verification on: no session yet. The challenge goes into its own
   // short-lived cookie and the browser is told only to ask for the code.
@@ -69,7 +81,7 @@ export async function POST(request) {
 /**
  * Keep-alive and liveness for SessionTimeout. Using the session is what keeps
  * it alive admin-side, so this simply uses it — through the patient group's
- * general limiter, never the sign-in limiter behind `/patient/auth/me`.
+ * general limiter, never the sign-in limiter.
  */
 export async function GET() {
   const result = await adminFetch('/patient/session').catch(() => null);

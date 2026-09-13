@@ -45,7 +45,8 @@ an order and no account a create-account link, anything else nothing. The links 
 - **Say only what the admin says.** Its 202 sentence is identical whether it found an account,
   an order, or nothing. Never render "we found your account" or "no account with that email" —
   that tells anyone whether a named person is a patient. A 429 is shown as a rate limit, never
-  as "did not match" (the sign-in route's known flaw — do not copy it).
+  as "did not match". The sign-in route did exactly that until 2026-09-13; the limiter is per network
+  address, not per account, so naming it reveals nothing about who is a patient.
 - **Never spend or even check the token on page load.** Both pages render a password form and
   ask the admin nothing until it is submitted; a validity check on load is a lookup any mail
   scanner could trigger.
@@ -87,8 +88,10 @@ control that is guaranteed to fail.
   other sessions, so a validly signed cookie can hold a dead token. `/login` asks `/patient/auth/me`
   before bouncing to `/` — trusting the signature there was an inescapable
   `/login` → `/` → "Session expired" → `/login` loop with no way to sign in. The `(portal)` layout
-  must **not** make the same call: `/me` is behind the admin's `auth` limiter (10/min per IP), so a
-  call per page view locks a patient out of signing in. Screens under it turn a 401 into a link.
+  must **not** make the same call: a `/me` per page view is an extra admin round-trip on every
+  navigation and spends the patient's per-account API budget (120/min) on what each screen already
+  learns from its own 401. Screens under it turn a 401 into a link. (`/me` and logout left the
+  per-IP sign-in limiter on 2026-09-13 — a 429'd logout used to leave the token alive.)
 - **Sessions end admin-side**: 30 minutes idle and 12 hours absolute by default (the admin's Settings →
   Patient portal). The cookie deliberately has no max-age of its own — a dead token is a 401 every
   screen already handles. `components/shell/SessionTimeout.jsx` mirrors only the idle clock
@@ -99,8 +102,8 @@ control that is guaranteed to fail.
   hide an expiry. The warning can come early, never late. It never extends anything the admin would
   not. On expiry it clears the cookie and lands on `/login?expired=1`; a deliberate Sign out from the
   warning lands on `/login`. Keep-alives go
-  through the admin's general patient limiter — never add them to `/patient/auth/me`, which is behind
-  the sign-in limiter.
+  through the admin's general patient limiter (`GET /patient/session`), which is what the admin counts
+  as use of the session.
 - **Two-step sign-in** (admin: `docs/portal/dev.md` → "Two-step verification"). After a correct
   password the admin returns a challenge, never a token. `app/api/session/route.js` puts it in its own
   `prx_challenge` cookie — httpOnly, Secure, SameSite=Strict, five minutes, signed under a different
