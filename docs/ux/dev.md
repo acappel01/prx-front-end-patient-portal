@@ -137,7 +137,7 @@ The portal never owns: what a task is, which tier it belongs to, or whether it i
   taught to read as one number over another.
 - **Branch failure copy on the STATUS, not on success.** A rejected value and a write that
   crashed after committing need opposite instructions, and only one of them may offer a retry.
-  See `vitals/dev.md` — the vitals endpoint does both.
+  See `vitals/dev.md` — the vitals endpoint did both, and the rule stands.
 
 ## Accessibility and touch
 

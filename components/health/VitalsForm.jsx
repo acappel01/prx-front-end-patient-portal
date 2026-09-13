@@ -16,11 +16,13 @@ import { useEffect, useRef, useState } from 'react';
  *
  * ── Why there is no "try again" button ─────────────────────────────────────
  *
- * P0-7: `POST /me/patient/vitals` inserts the row and THEN crashes, on every
- * single call, ordering by a column that does not exist. The write succeeds
- * while the API reports failure. So the natural response to an error — press
- * it again — writes a second reading, and the duplicate lands in the trend
- * this whole screen exists to draw. Self-reported weight is the main reason a
+ * P0-7: `POST /me/patient/vitals` used to insert the row and THEN crash, on
+ * every call. The provider fixed that on its sandbox (2026-09-13; not yet on its
+ * production), but the rule stands: any failure after the insert commits — a
+ * dropped connection, a timeout, a database hiccup on the re-read — leaves a
+ * written row behind an error. The natural response, pressing it again, writes a
+ * second reading, and the duplicate lands in the trend this whole screen exists
+ * to draw. Self-reported weight is the main reason a
  * patient opens a portal between visits, so that is the one dataset we can
  * least afford to corrupt.
  *
@@ -35,6 +37,27 @@ import { useEffect, useRef, useState } from 'react';
  *         and resubmitting is right, and the form says so.
  *   any other failure → it may well have been written. No retry is offered.
  */
+
+/**
+ * "2.4 lbs down since your last reading, 7 days ago" — from the provider's
+ * `change_from_last`, which exists only when both this and the previous reading
+ * include a weight. Null otherwise: a blood-pressure-only reading or a first
+ * reading says nothing about change.
+ */
+function describeChange(change) {
+  const weight = Number(change?.weight);
+
+  if (!change || !Number.isFinite(weight)) return null;
+
+  // Whole days: the provider sends a fraction (Carbon 3's diffInDays is a float),
+  // and "0.0010069 days ago" was what the first live save printed.
+  const days = Math.floor(Number(change.period_days));
+  const when = !Number.isFinite(days) ? '' : days === 0 ? ', earlier today' : days === 1 ? ', 1 day ago' : `, ${days} days ago`;
+
+  if (Math.round(weight * 10) === 0) return `Same weight as your last reading${when}.`;
+
+  return `${Math.abs(weight)} lbs ${weight < 0 ? 'down' : 'up'} since your last reading${when}.`;
+}
 
 /**
  * The `min`/`max` here mirror the provider's own `validate()` rules, so an
@@ -110,6 +133,7 @@ export default function VitalsForm() {
   // is deliberately no 'failed' that leaves you on a filled form with a live
   // submit button.
   const [outcome, setOutcome] = useState(null);
+  const [change, setChange] = useState(null);
   const outcomeRef = useRef(null);
 
   // A ref, not the `busy` state, because state is not readable until React has
@@ -173,9 +197,8 @@ export default function VitalsForm() {
 
     if (values.notes.trim() !== '') body.notes = values.notes.trim();
 
-    // `recorded_at` is deliberately not sent. The provider validates it and
-    // then never passes it to the model, so a client that sends one is
-    // silently ignored — and the row is timestamped `created_at` regardless.
+    // `recorded_at` is deliberately not sent: the provider does not accept it,
+    // and every row is timestamped `created_at` at the moment it is saved.
 
     const response = await fetch('/api/portal/patient/vitals', {
       method: 'POST',
@@ -184,6 +207,13 @@ export default function VitalsForm() {
     }).catch(() => null);
 
     if (response?.ok) {
+      // The provider returns how weight moved since the previous reading. Read
+      // the body rather than just the status — the admin and proxy both carry
+      // `change_from_last` through, and a form that ignored it would be the
+      // last layer to drop a field every other layer kept.
+      const payload = await response.json().catch(() => null);
+
+      setChange(payload?.data?.change_from_last ?? null);
       setOutcome('saved');
       setBusy(false);
 
@@ -246,6 +276,7 @@ export default function VitalsForm() {
           Reading saved
         </h2>
         <p className="prx-muted">It is on your progress from today.</p>
+        {describeChange(change) ? <p>{describeChange(change)}</p> : null}
         <p>
           <a className="prx-task__cta" href="/health">
             See my readings
@@ -281,8 +312,8 @@ export default function VitalsForm() {
           We couldn&rsquo;t confirm that reading
         </h2>
         <p>
-          It may still have been saved. Check your readings before adding it again — logging the
-          same measurement twice would put a duplicate in your progress.
+          It may still have been saved. Check your readings before adding it again, so the same
+          measurement doesn&rsquo;t appear twice in your progress.
         </p>
         <p>
           <a className="prx-task__cta" href="/health">

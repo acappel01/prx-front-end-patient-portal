@@ -23,13 +23,15 @@ row; reading the request names renders blank rows from real data. **Both have sh
 form's names come from the provider's handler, not from its resource DTO and not from the list
 this app renders — check the live payload before changing either side.
 
-`recorded_at` is deliberately not sent. The provider validates it and then never passes it to the
-model, so a client that supplies one is silently ignored and the row is timestamped `created_at`.
+`recorded_at` is deliberately not sent: the provider does not accept it, and every row is timestamped
+`created_at`.
 
-## The save can fail after it has succeeded
+## A save can fail after it has succeeded
 
-`POST /me/patient/vitals` **inserts the row and then crashes**, on every call, ordering by a column
-the table does not have (upstream P0-7). The write commits; the API reports failure.
+`POST /me/patient/vitals` used to **insert the row and then crash** on every call (upstream P0-7).
+The provider fixed that on its sandbox on 2026-09-13 (not yet on its production). The rule this
+screen is built on stands regardless: once the insert commits, any later failure — a timeout, a
+dropped connection, a database error on the re-read — reports an error for a row that exists.
 
 So the natural response to an error — press the button again — writes a second reading, and the
 duplicate lands in the trend the Health screen exists to draw. Self-reported weight is the main
@@ -40,14 +42,14 @@ least afford to corrupt.
 
 | Outcome | Copy | Retry offered? |
 |---|---|---|
-| `201` | "Reading saved." | — |
+| `201` | "Reading saved." plus, when both readings have a weight, the change since the last one (`change_from_last`: "2.4 lbs down since your last reading, 7 days ago"). `period_days` arrives as a **fraction** (Carbon 3) and is floored. | — |
 | `401` | Session expired, sign in again. | — |
 | `422` | Names the field. Values are kept. | **Yes** — nothing was written. |
 | anything else | "We couldn't confirm that reading. It may still have been saved…" | **No.** No button, no filled form. |
 
 The unconfirmed screen does not say *try again*, does not claim the reading was lost, and offers
 exactly one way out: **Check my readings**. Telling the patient the truth and pointing them at the
-data is the only honest option while the upstream bug stands.
+data is the only honest option whenever the outcome is unknown.
 
 That is also why the Health list renders every measurement rather than only weight, and localises
 its timestamps: it is the destination of that message, so it has to be legible enough to answer

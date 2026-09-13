@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
  * empty and never asks for the thing that would fill it.
  *
  * This list is also where the log form sends anyone whose save could not be
- * confirmed (P0-7 — the provider writes the row and then fails), so every row
+ * confirmed (a write can commit before an error — P0-7 did it on every call), so every row
  * has to be legible enough to answer "is the reading I just took in here?".
  * That is why it renders every measurement rather than only weight, and why
  * the timestamp is localised rather than left as a UTC ISO string.
