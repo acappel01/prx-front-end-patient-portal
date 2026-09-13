@@ -35,7 +35,9 @@ export default function ProgressSummary({ summary }) {
             <span className="prx-metric__value">{weight}</span>
             <span className="prx-metric__unit">lbs</span>
             {goal != null ? (
-              <span className="prx-metric__meta">Goal {goal} lbs</span>
+              <a className="prx-metric__meta" href="/health/goal">
+                Goal {goal} lbs
+              </a>
             ) : (
               // Ask for the thing that would make this useful, rather than
               // reporting that it is missing.

@@ -327,6 +327,12 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
   background: var(--prx-surface);
 }
 
+.prx-details {
+  margin: 0;
+
+  dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+}
+
 // Message thread.
 .prx-thread {
   list-style: none;

@@ -157,6 +157,9 @@ control that is guaranteed to fail.
 
 ## Data minimisation
 
+- **Demographics are shown, not stored.** Record → Your details reads name, date of birth, contact and
+  patient number live from the admin (`GET /patient/profile` → the provider) on each visit; the admin
+  keeps only the provider's identifiers. Nothing is cached in the portal.
 - **The one opaque value an error screen shows is a correlation id.** On a 5xx (and on the vitals
   "couldn't confirm" outcome) screens render `Reference: <uuid>` — the admin's `X-Request-ID`, minted
   per request, also sent to the clinical provider and echoed in its logs. It is not PHI, not a

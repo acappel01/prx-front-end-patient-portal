@@ -1,6 +1,10 @@
 # Vitals
 
-Two screens: **Health** (`/health`) lists readings, **Log a reading** (`/health/log`) captures one.
+Three screens: **Health** (`/health`) lists readings, **Log a reading** (`/health/log`) captures one,
+and **Your weight goal** (`/health/goal`) sets the goal Home measures progress against. The goal lives on
+the provider's chart (`/me/patient/vitals/goals` via the admin's `GET|POST /patient/vitals/goals`); the
+provider keeps an existing value when a blank one is sent, so a goal or target date can be changed but
+not cleared, and the form says so once a date exists.
 
 ## The field names are asymmetric, and getting them wrong fails silently
 
