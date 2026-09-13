@@ -1,3 +1,4 @@
+import SecurityHistory from '@/components/account/SecurityHistory';
 import Screen from '@/components/ui/Screen';
 import SignOutButton from '@/components/ui/SignOutButton';
 
@@ -15,7 +16,9 @@ export const dynamic = 'force-dynamic';
  * keyed by ENC- ids is a clinician's tool shown to a patient.
  *
  * Sign out lives here, under Operate: Record is the account destination, and
- * the portal had no way to end a session at all.
+ * the portal had no way to end a session at all. Sign-in activity sits directly
+ * above it, because the one thing that list asks of a patient who doesn't
+ * recognise an entry is to press that button.
  */
 export default function RecordPage() {
   return (
@@ -36,6 +39,7 @@ export default function RecordPage() {
           </ul>
         )}
       </Screen>
+      <SecurityHistory />
       <SignOutButton />
     </>
   );

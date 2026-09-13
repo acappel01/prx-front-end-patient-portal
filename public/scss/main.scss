@@ -277,6 +277,20 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 
 .prx-muted { color: var(--prx-ink-2); }
 
+// Sign-in activity on Record. The time column must not squeeze the label and
+// device onto three lines at 390px, so it keeps its width and does not wrap.
+.prx-security {
+  margin-top: 2rem;
+
+  h2 { margin-bottom: .5rem; }
+  // A flex child will not shrink below its longest unbreakable word, and an
+  // IPv6 address is one 39-character word — mobile carriers hand those out.
+  &__what { min-width: 0; overflow-wrap: anywhere; }
+  &__current { color: var(--prx-ink); font-weight: 600; }
+  &__when { flex-shrink: 0; text-align: right; white-space: nowrap; }
+  &__note { margin-top: .75rem; font-size: .875rem; }
+}
+
 // Headings that receive focus programmatically after an outcome replaces a
 // form. They are not tab stops, so the ring would only ever say "you were
 // moved here" — which the announcement has already said.

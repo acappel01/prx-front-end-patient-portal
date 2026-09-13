@@ -98,6 +98,16 @@ control that is guaranteed to fail.
   CDN in front and the true client is no longer the rightmost entry: change the extraction and
   the admin's trusted proxies together.
 
+- **The patient can see their own sign-in activity** (Record, `components/account/SecurityHistory.jsx`,
+  from `GET /patient/security/events`). It is a server component through `adminFetch`, so it has no
+  proxy allowlist entry and no browser path. The admin's resource is a whitelist; this side filters
+  nothing and must not add fields the admin withholds — above all, never distinguish "unknown
+  address" from "wrong password" on a failed attempt. It renders nothing on an error response or a
+  network failure (it catches `adminFetch`'s throw), so the history never puts the Record screen
+  into an error state. On staff- or system-made changes the admin sends no IP or browser. Signing out records a
+  `logout` event admin-side, which is one more reason `DELETE /api/session` must keep calling the
+  admin rather than only clearing the cookie.
+
 ## Payment data
 
 - The card number never reaches a server. Tokenize in the browser.
