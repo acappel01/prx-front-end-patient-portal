@@ -1,5 +1,8 @@
 import ActionStack from '@/components/stack/ActionStack';
 import ProgressSummary from '@/components/stack/ProgressSummary';
+import { redirect } from 'next/navigation';
+
+import TwoFactorPrompt from '@/components/account/TwoFactorPrompt';
 import { adminFetch } from '@/lib/adminApi';
 
 /**
@@ -20,7 +23,11 @@ import { adminFetch } from '@/lib/adminApi';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const { ok, status, data } = await adminFetch('/patient/home');
+  const { ok, status, data, code } = await adminFetch('/patient/home');
+
+  if (status === 403 && code === 'two_factor_setup_required') {
+    redirect('/record/security?required=1');
+  }
 
   if (status === 401) {
     // A token minted before an ability existed will lack it, and an expired
@@ -56,6 +63,7 @@ export default async function HomePage() {
     return (
       <>
         <h1>{data?.greeting ?? 'Your care'}</h1>
+        <TwoFactorPrompt />
         <div className="prx-task prx-task--blocking">
           <h2 className="prx-task__title">Connect your medical record</h2>
           <p className="prx-task__body">
@@ -73,6 +81,7 @@ export default async function HomePage() {
   return (
     <>
       <h1>{data?.greeting ?? 'Your care'}</h1>
+      <TwoFactorPrompt />
       <ActionStack tasks={data?.tasks ?? []} />
       <ProgressSummary summary={data?.summary} />
     </>

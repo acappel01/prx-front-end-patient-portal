@@ -40,6 +40,15 @@ export default function LoginForm({ stayOnPage = false }) {
       return;
     }
 
+    const payload = await response.json().catch(() => null);
+
+    // Two-step verification: the challenge is already in an httpOnly cookie.
+    if (payload?.data?.two_factor) {
+      window.location.assign('/login/verify');
+
+      return;
+    }
+
     // Full navigation rather than a client push: the authenticated layout
     // resolves the session server-side, and a soft push can render it from a
     // cached RSC payload taken before the cookie existed.
@@ -53,7 +62,7 @@ export default function LoginForm({ stayOnPage = false }) {
     if (stayOnPage) {
       window.location.reload();
     } else {
-      window.location.assign('/');
+      window.location.assign(payload?.data?.next ?? '/');
     }
   }
 

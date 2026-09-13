@@ -1,4 +1,5 @@
 import SecurityHistory from '@/components/account/SecurityHistory';
+import TwoFactorStatusLink from '@/components/account/TwoFactorStatusLink';
 import Screen from '@/components/ui/Screen';
 import SignOutButton from '@/components/ui/SignOutButton';
 
@@ -39,6 +40,7 @@ export default function RecordPage() {
           </ul>
         )}
       </Screen>
+      <TwoFactorStatusLink />
       <SecurityHistory />
       <SignOutButton />
     </>

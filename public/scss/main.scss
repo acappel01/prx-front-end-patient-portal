@@ -322,6 +322,61 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
   background: var(--prx-surface);
 }
 
+// Two-step verification.
+.prx-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--prx-brand);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.prx-form__title { font-size: 1.25rem; }
+.prx-form__links { margin: .75rem 0 0; }
+.prx-back { margin: 0 0 .75rem; font-size: .9375rem; }
+.prx-security-link { margin-top: 1.5rem; }
+
+.prx-qr {
+  display: block;
+  width: 200px;
+  max-width: 100%;
+  height: auto;
+  margin: .5rem auto 1rem;
+  padding: .5rem;
+  border-radius: .5rem;
+  // A QR code needs light modules around dark ones whatever the theme.
+  background: #fff;
+}
+
+.prx-manual-key {
+  summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; }
+  code { font-size: 1rem; letter-spacing: .05em; overflow-wrap: anywhere; }
+}
+
+.prx-codes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .35rem;
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+
+  code { font-size: 1rem; letter-spacing: .04em; }
+
+  @media (min-width: 480px) { grid-template-columns: 1fr 1fr; }
+}
+
+.prx-check {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  min-height: 44px;
+  margin: .75rem 0;
+}
+
 // Sign-in activity on Record. The time column must not squeeze the label and
 // device onto three lines at 390px, so it keeps its width and does not wrap.
 .prx-security {

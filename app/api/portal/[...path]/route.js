@@ -65,6 +65,7 @@ async function handle(request, context, method) {
       // and stack with its own on every 5xx, so nothing here is a passthrough
       // of anything the provider wrote.
       ...(result.errors ? { errors: result.errors } : {}),
+      ...(result.code ? { code: result.code } : {}),
     },
     { status: result.status }
   );

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
-import { endSession, startSession } from '@/lib/session';
+import { landingFor } from '@/lib/landing';
+import { endChallenge, endSession, startChallenge, startSession } from '@/lib/session';
 
 /**
  * Sign in and out.
@@ -28,6 +29,15 @@ export async function POST(request) {
     body: { email: payload.email, password: payload.password },
   });
 
+  // Two-step verification on: no session yet. The challenge goes into its own
+  // short-lived cookie and the browser is told only to ask for the code.
+  if (result.ok && result.data?.two_factor_required && result.data?.challenge) {
+    await endSession();
+    await startChallenge(result.data.challenge);
+
+    return NextResponse.json({ data: { two_factor: true } });
+  }
+
   if (!result.ok || !result.data?.token) {
     // One message for a bad password and for an unknown address. Distinguishing
     // them turns this endpoint into an account-existence oracle, which for a
@@ -37,7 +47,7 @@ export async function POST(request) {
 
   await startSession(result.data.token);
 
-  return NextResponse.json({ data: { ok: true } });
+  return NextResponse.json({ data: { ok: true, next: landingFor(result.data.patient) } });
 }
 
 /**

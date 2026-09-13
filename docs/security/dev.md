@@ -101,6 +101,25 @@ control that is guaranteed to fail.
   warning lands on `/login`. Keep-alives go
   through the admin's general patient limiter — never add them to `/patient/auth/me`, which is behind
   the sign-in limiter.
+- **Two-step sign-in** (admin: `docs/portal/dev.md` → "Two-step verification"). After a correct
+  password the admin returns a challenge, never a token. `app/api/session/route.js` puts it in its own
+  `prx_challenge` cookie — httpOnly, Secure, SameSite=Strict, five minutes, signed under a different
+  HMAC purpose than `prx_session` so a copied value never verifies as the other — and tells the
+  browser only `{two_factor: true}`. `/login/verify` renders only while that cookie exists;
+  `POST /api/session/two-factor` reads the challenge from the cookie (never from the body), exchanges
+  it with the code, and sets the session. Refusals keep the admin's one sentence; a 429 or a missing
+  challenge sends the patient back to the password. Known limit: signing in from a claim link with
+  two-step on lands on Home, not back on the claim page (the claim URL carries a token and is never
+  copied into a `next` parameter) — the link in the email still works.
+- **Two-step management** (Record → Two-step verification, `components/account/TwoFactorManager.jsx`)
+  goes through four POST proxy entries. Recovery codes exist only in the confirm/regenerate response
+  and component state; nothing stores them. The QR code is an admin-rendered SVG data URI. Under the
+  `required` policy the admin answers other screens with `403 {code: two_factor_setup_required}`;
+  `Screen` and Home redirect to `/record/security?required=1`, which `adminFetch` makes possible by
+  passing `code` through. The Home invitation's "Not now" is a plain 30-day preference cookie
+  holding no identity, and hides the card through React state — removing the node directly made the
+  next tab tap crash the page (React unmounting a node that was gone). Setting it up the first time
+  asks for the password.
 - **Every admin call carries the patient's address and browser** (`lib/adminApi.js`). The admin
   sees this server as the caller, so without it every audit IP is the portal host and every
   per-IP rate limit is one shared bucket. Exactly **one** `X-Forwarded-For` value is sent: the
