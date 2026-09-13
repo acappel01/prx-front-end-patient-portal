@@ -286,7 +286,7 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
   // A flex child will not shrink below its longest unbreakable word, and an
   // IPv6 address is one 39-character word — mobile carriers hand those out.
   &__what { min-width: 0; overflow-wrap: anywhere; }
-  &__current { color: var(--prx-ink); font-weight: 600; }
+  &__current { color: var(--prx-ink); font-weight: 600; white-space: nowrap; }
   &__when { flex-shrink: 0; text-align: right; white-space: nowrap; }
   &__note { margin-top: .75rem; font-size: .875rem; }
 }
