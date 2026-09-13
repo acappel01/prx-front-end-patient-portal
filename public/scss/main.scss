@@ -327,6 +327,67 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
   background: var(--prx-surface);
 }
 
+// Message thread.
+.prx-thread {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+
+  &__empty { padding: 1rem 0; }
+  &__end { height: 1px; }
+  &__paused { text-align: center; margin: 0 0 .75rem; }
+}
+
+.prx-bubble {
+  align-self: flex-start;
+  max-width: 85%;
+  padding: .6rem .8rem;
+  border: 1px solid var(--prx-line);
+  border-radius: .9rem .9rem .9rem .25rem;
+  background: var(--prx-surface);
+  overflow-wrap: anywhere;
+
+  &--mine {
+    align-self: flex-end;
+    border-radius: .9rem .9rem .25rem .9rem;
+    background: var(--prx-bg);
+  }
+
+  &__who { display: block; font-size: .75rem; font-weight: 600; color: var(--prx-ink-2); }
+  &__text { display: block; white-space: pre-wrap; }
+  &__when { display: block; margin-top: .2rem; font-size: .75rem; color: var(--prx-ink-2); }
+}
+
+.prx-composer {
+  position: sticky;
+  // Clear of the tab bar AND its raised centre button, which rises above it.
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .5rem 0;
+  background: var(--prx-bg);
+
+  textarea {
+    flex: 1 1 12rem;
+    min-height: 44px;
+    padding: .6rem .75rem;
+    border: 1px solid var(--prx-line);
+    border-radius: .5rem;
+    background: var(--prx-bg);
+    color: var(--prx-ink);
+    font: inherit;
+    font-size: 16px;
+    resize: vertical;
+  }
+
+  button { min-height: 44px; }
+  .prx-field__error { flex-basis: 100%; margin: 0; }
+}
+
 // Two-step verification.
 .prx-link {
   padding: 0;
@@ -582,6 +643,9 @@ h2[tabindex='-1']:focus { outline: none; }
 // icon rail; nothing is a different interface at a different width.
 
 @media (min-width: 62em) {
+  // The tab bar becomes a side rail here, so the composer sits at the bottom.
+  .prx-composer { bottom: 0; }
+
   .prx-app { flex-direction: row; }
 
   .prx-tabbar {

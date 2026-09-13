@@ -17,13 +17,14 @@ export default function TalkPage() {
       title="Talk to your provider"
       path="/patient/conversations"
       empty="No conversations yet."
-      emptyAction={{ href: '/talk/new', label: 'Start a consult' }}
+      emptyAction={{ href: '/talk/new', label: 'Start a conversation' }}
+      action={{ href: '/talk/new', label: 'New message' }}
     >
       {(rows) => (
         <ul className="prx-rows">
           {rows.map((conversation) => (
             <li className="prx-row" key={conversation.id}>
-              <span>{conversation.subject ?? 'Conversation'}</span>
+              <a href={`/talk/${conversation.id}`}>{conversation.subject ?? 'Conversation'}</a>
               {conversation.unread_count > 0 ? (
                 <span className="prx-task__chip">{conversation.unread_count} new</span>
               ) : null}
