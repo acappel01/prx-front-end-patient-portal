@@ -1,6 +1,6 @@
 # Vitals
 
-Three screens: **Health** (`/health`) lists readings, **Log a reading** (`/health/log`) captures one,
+Three screens: **Health** (`/health`) charts and lists readings, **Log a reading** (`/health/log`) captures one,
 and **Your weight goal** (`/health/goal`) sets the goal Home measures progress against. The goal lives on
 the provider's chart (`/me/patient/vitals/goals` via the admin's `GET|POST /patient/vitals/goals`); the
 provider keeps an existing value when a blank one is sent, so a goal or target date can be changed but
@@ -83,5 +83,29 @@ guessing one is upstream P0-9 — visits landing exactly one offset off.
 
 ## Charts
 
-Not built. When they are: from an API-supplied series, behind a swappable component boundary. The
-charting library is a deployment choice, never a hardcoded dependency of this skeleton.
+`/health` makes one call, the admin's `GET /patient/health/series?period=1year|all`, which returns the
+chart series (weight, blood pressure, heart rate, blood glucose — oldest first, exact instants), the
+weight goal, and the newest 50 readings for the list. The period lives in the URL (`?period=all`);
+**Past year** is the default and **All time** shows a continuing patient's whole history — nothing is
+lost by the shorter view, because the history stays with the provider.
+
+`components/charts/TrendChart.jsx` is hand-rolled SVG, rendered on the server, and is the swap boundary:
+a deployment that wants a charting library replaces that file and keeps its props. Rules it follows,
+from the portal framework spec:
+
+- **Every chart carries its target** — the weight goal is a dashed line in the fixed `--prx-ok` colour (the spec calls it `--prx-gain`),
+  labelled in place, drawn even when the series is short. A brand colour never marks the target.
+- **The endpoint is emphasised** — a ringed dot on the latest reading — and one plain sentence under the
+  chart ("Up 16.6 lbs across these readings. 10.6 lbs above your goal of 185 lbs.") says what the line
+  means. Against the goal it states only where the latest reading sits ("10.6 lbs above your goal"),
+  never a guessed direction: the window's first reading is not where the patient started, and inferring
+  it once told a patient 10 lbs above their goal that they had reached it.
+- **Time is proportional**: three months without a reading looks like three months. The first and last
+  dates render through `LocalTime format="date"`, in the reader's timezone.
+- **Colour is never the only signal**: the two blood-pressure lines differ in dash as well as colour, and
+  the goal is labelled.
+- **Empty asks for the reading**: no weight yet shows "Log your weight"; a weight without a goal offers
+  "Set a goal".
+
+Blood pressure, heart rate and glucose charts appear only once a reading of that kind exists. When the
+provider returned 1000 readings (the admin's cap), a line says the charts show the most recent ones.

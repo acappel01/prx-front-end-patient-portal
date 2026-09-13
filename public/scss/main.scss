@@ -675,3 +675,93 @@ h2[tabindex='-1']:focus { outline: none; }
 
   h1 { font-size: 1.75rem; }
 }
+
+// ── Health charts ────────────────────────────────────────────────────────────
+// Every colour is a token, so a re-brand needs no chart configuration. The goal
+// line uses the fixed "ok" semantic colour, never the brand: a brand must not be
+// able to make a target look like the data.
+
+.prx-section-title { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+
+.prx-periods {
+  display: flex;
+  gap: .5rem;
+  margin: 0 0 1rem;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 .9rem;
+    border: 1px solid var(--prx-line);
+    border-radius: 999px;
+    color: var(--prx-ink-2);
+    text-decoration: none;
+  }
+
+  a[aria-current='page'] {
+    border-color: var(--prx-brand);
+    color: var(--prx-ink);
+    font-weight: 600;
+  }
+}
+
+.prx-chart {
+  background: var(--prx-surface);
+  border: 1px solid var(--prx-line);
+  border-radius: .75rem;
+  padding: 1rem;
+  margin: 0 0 .75rem;
+  max-width: 40rem;
+
+  &__head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  &__title { font-size: .95rem; margin: 0; color: var(--prx-ink-2); font-weight: 600; }
+  &__value { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--prx-ink); }
+  &__plot { display: block; width: 100%; height: auto; margin: .5rem 0 .25rem; overflow: visible; }
+  &__axis { font-size: 9px; fill: var(--prx-ink-3); }
+  &__baseline { stroke: var(--prx-line); stroke-width: 1; }
+
+  &__target {
+    line { stroke: var(--prx-ok); stroke-width: 1.5; stroke-dasharray: 4 4; }
+    text { font-size: 9px; fill: var(--prx-ok); font-weight: 600; }
+  }
+
+  &__line {
+    polyline { fill: none; stroke: var(--prx-brand); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .prx-chart__ring { fill: var(--prx-surface); stroke: var(--prx-brand); stroke-width: 2; }
+    .prx-chart__dot { fill: var(--prx-brand); }
+  }
+
+  &__line--muted {
+    polyline { stroke: var(--prx-ink-3); stroke-dasharray: 2 3; }
+    .prx-chart__ring { stroke: var(--prx-ink-3); }
+    .prx-chart__dot { fill: var(--prx-ink-3); }
+  }
+
+  &__range { display: flex; justify-content: space-between; font-size: .8rem; }
+
+  &__legend {
+    display: flex;
+    gap: 1rem;
+    list-style: none;
+    margin: .5rem 0 0;
+    padding: 0;
+    font-size: .85rem;
+    color: var(--prx-ink-2);
+  }
+
+  // Line style, not colour alone, tells the two lines apart.
+  &__key::before,
+  &__key--muted::before {
+    content: '';
+    display: inline-block;
+    width: 1.25rem;
+    margin-right: .4rem;
+    vertical-align: middle;
+    border-top: 2px solid var(--prx-brand);
+  }
+
+  &__key--muted::before { border-top: 2px dashed var(--prx-ink-3); }
+
+  &__summary { margin: .5rem 0 0; color: var(--prx-ink); }
+}

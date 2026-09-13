@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
  * (`…+00:00`), so it names one instant. A NAIVE timestamp must never be run
  * through this — it has no instant to convert, and guessing one is the bug.
  */
-export default function LocalTime({ value }) {
+export default function LocalTime({ value, format = 'datetime' }) {
   // Starts as the server's output so the first paint matches and React has no
   // hydration mismatch to warn about.
   const [text, setText] = useState(value);
@@ -27,12 +27,13 @@ export default function LocalTime({ value }) {
     if (Number.isNaN(date.getTime())) return;
 
     setText(
-      new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(date)
+      new Intl.DateTimeFormat(
+        undefined,
+        // `date` for chart axes, where a time of day is noise.
+        format === 'date' ? { dateStyle: 'medium' } : { dateStyle: 'medium', timeStyle: 'short' }
+      ).format(date)
     );
-  }, [value]);
+  }, [value, format]);
 
   return <time dateTime={value}>{text}</time>;
 }
