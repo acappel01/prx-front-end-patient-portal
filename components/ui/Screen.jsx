@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
 
 /**
@@ -10,7 +11,7 @@ import { adminFetch } from '@/lib/adminApi';
  * be missed and throw a 500 onto a clinical page.
  */
 export default async function Screen({ title, path, empty, emptyAction, action, children }) {
-  const { ok, status, data, code } = await adminFetch(path);
+  const { ok, status, data, code, requestId } = await adminFetch(path);
 
   // The install requires two-step verification and this account lacks it.
   if (status === 403 && code === 'two_factor_setup_required') {
@@ -33,6 +34,7 @@ export default async function Screen({ title, path, empty, emptyAction, action, 
       <>
         <h1>{title}</h1>
         <p className="prx-muted">We can&rsquo;t load this right now. Please try again in a moment.</p>
+        {status >= 500 ? <Reference id={requestId} /> : null}
       </>
     );
   }

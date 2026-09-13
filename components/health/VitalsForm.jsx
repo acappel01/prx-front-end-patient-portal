@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import Reference from '@/components/ui/Reference';
+
 /**
  * Log a reading.
  *
@@ -134,6 +136,7 @@ export default function VitalsForm() {
   // submit button.
   const [outcome, setOutcome] = useState(null);
   const [change, setChange] = useState(null);
+  const [reference, setReference] = useState(null);
   const outcomeRef = useRef(null);
 
   // A ref, not the `busy` state, because state is not readable until React has
@@ -265,6 +268,11 @@ export default function VitalsForm() {
     }
 
     // Everything else, including a network failure. The reading may be saved.
+    // A reference only where support could use one: a provider failure (5xx)
+    // or no answer at all. A 403/404/409 is an answer, not a fault.
+    const failure = await response?.json().catch(() => null);
+
+    setReference(!response || response.status >= 500 ? (failure?.request_id ?? null) : null);
     setOutcome('unconfirmed');
     setBusy(false);
   }
@@ -320,6 +328,7 @@ export default function VitalsForm() {
             Check my readings
           </a>
         </p>
+        <Reference id={reference} />
       </div>
     );
   }

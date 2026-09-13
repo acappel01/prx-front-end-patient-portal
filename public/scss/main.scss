@@ -277,6 +277,11 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 
 .prx-muted { color: var(--prx-ink-2); }
 
+// A support reference under an error: small, selectable, never wrapping mid-id
+// awkwardly at 390px (a uuid is one 36-character word).
+.prx-reference { margin-top: .75rem; font-size: .8125rem; }
+.prx-reference__id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
+
 // Session timeout warning. Fixed over everything including the tab bar, since
 // the one thing on screen that matters is the choice it offers.
 .prx-timeout {

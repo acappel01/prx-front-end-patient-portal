@@ -157,5 +157,11 @@ control that is guaranteed to fail.
 
 ## Data minimisation
 
+- **The one opaque value an error screen shows is a correlation id.** On a 5xx (and on the vitals
+  "couldn't confirm" outcome) screens render `Reference: <uuid>` — the admin's `X-Request-ID`, minted
+  per request, also sent to the clinical provider and echoed in its logs. It is not PHI, not a
+  credential and not enumerable; it lets support find the failed request. It is never shown on a 401
+  or 422, where there is nothing for support to look up.
+
 Clinical values reach the browser only where a screen renders them. Nothing clinical is logged,
 sent to an analytics destination, or placed in a URL.

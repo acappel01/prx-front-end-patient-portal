@@ -3,6 +3,7 @@ import ProgressSummary from '@/components/stack/ProgressSummary';
 import { redirect } from 'next/navigation';
 
 import TwoFactorPrompt from '@/components/account/TwoFactorPrompt';
+import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
 
 /**
@@ -23,7 +24,7 @@ import { adminFetch } from '@/lib/adminApi';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const { ok, status, data, code } = await adminFetch('/patient/home');
+  const { ok, status, data, code, requestId } = await adminFetch('/patient/home');
 
   if (status === 403 && code === 'two_factor_setup_required') {
     redirect('/record/security?required=1');
@@ -49,6 +50,7 @@ export default async function HomePage() {
       <>
         <h1>We can&rsquo;t load your care right now</h1>
         <p className="prx-muted">Please try again in a moment.</p>
+        {status >= 500 ? <Reference id={requestId} /> : null}
       </>
     );
   }

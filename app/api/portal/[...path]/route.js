@@ -66,6 +66,7 @@ async function handle(request, context, method) {
       // of anything the provider wrote.
       ...(result.errors ? { errors: result.errors } : {}),
       ...(result.code ? { code: result.code } : {}),
+      ...(result.requestId ? { request_id: result.requestId } : {}),
     },
     { status: result.status }
   );
