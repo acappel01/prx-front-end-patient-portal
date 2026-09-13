@@ -29,6 +29,9 @@ present and is absent in production.
 | `app/(portal)/` | The authenticated tree. Its layout is the single session gate. |
 | `app/login/` | Anonymous. Bounces to `/` only a session the admin still accepts (`/patient/auth/me`), never on the cookie's signature alone. |
 | `app/claim/[token]/` | Anonymous. Lands a claim link; signs in in place. |
+| `app/register/`, `app/forgot/` | Anonymous. Email-only forms that ask the admin to email a link. No account is created here. |
+| `app/create-account/[token]/`, `app/reset/[token]/` | Anonymous. Land the emailed links; a password form, token spent only on submit. |
+| `app/api/account/{link,create,reset}/` | The three anonymous account calls. Outside the proxy, which needs a session. |
 | `app/api/session/` | Sign in and out. Exchanges a credential for an admin token server-side. |
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `lib/` | Server-only modules. `adminApi`, `session`, `portalProxy`, `theme`, `destinations`. |

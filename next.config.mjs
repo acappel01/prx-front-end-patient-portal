@@ -6,7 +6,8 @@ const nextConfig = {
   images: { unoptimized: true },
 
   // Applied to EVERY route, including the API routes and any error page. The
-  // portal has no cacheable surface at all: there is no anonymous page, and a
+  // portal has no cacheable surface at all: the few anonymous pages (sign in,
+  // register, forgot, and the emailed-link pages) are per-visitor forms, and a
   // patient's view must never be served to another request.
   async headers() {
     return [
@@ -28,6 +29,16 @@ const nextConfig = {
         // access log records Referers. Later entries override earlier ones
         // for the same key.
         source: '/claim/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        // The emailed create-account and reset links carry a single-use token
+        // in their path too, for the same reason as a claim page.
+        source: '/create-account/:path*',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        source: '/reset/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
     ];

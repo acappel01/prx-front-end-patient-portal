@@ -33,6 +33,34 @@ this screen pair must keep:
 - There is no order reference to type and no `?order=` on `/connect`. An order uuid is not proof
   of anything, and the endpoint that accepted one was removed.
 
+**Accounts are created by an emailed link, never by a form.** `/register` and `/forgot` take only
+an email address and post it to `/api/account/link`, which calls the admin's register or forgot
+route — the same decision either way: an address with an account is sent a reset link, one with
+an order and no account a create-account link, anything else nothing. The links land on
+`/create-account/{token}` and `/reset/{token}`. Rules for these pages:
+
+- **There is no name, password or chart field at registration**, and none may be added. An
+  account's email is the address the link reached; a form field would let someone register a
+  stranger's address, which is the squatting this replaced.
+- **Say only what the admin says.** Its 202 sentence is identical whether it found an account,
+  an order, or nothing. Never render "we found your account" or "no account with that email" —
+  that tells anyone whether a named person is a patient. A 429 is shown as a rate limit, never
+  as "did not match" (the sign-in route's known flaw — do not copy it).
+- **Never spend or even check the token on page load.** Both pages render a password form and
+  ask the admin nothing until it is submitted; a validity check on load is a lookup any mail
+  scanner could trigger.
+- **Same token hygiene as `/claim/`**: token in a POST body with `referrerPolicy: 'no-referrer'`,
+  pages served with `Referrer-Policy: no-referrer`, and the reverse proxy keeps `/create-account/`
+  and `/reset/` request lines and those pages' Referers out of its access log.
+- **Create-account signs in; reset does not.** The admin returns a session for a new account,
+  exchanged for the cookie in `/api/account/create` exactly as sign-in does. A reset signs every
+  session out and issues none — the link proves the mailbox and must not stand in for a second
+  factor — so `/reset` ends at "Sign in". No Strict-cookie reload is needed on either page: no
+  session is expected on arrival.
+- These three routes are **not** in the portal proxy allowlist: the proxy requires a session, and
+  these are the pages for people who do not have one. Each rebuilds its upstream body from the
+  fields the admin reads rather than forwarding the request.
+
 **Every identifier resolves from the session's own record.** Never accept a caller-supplied
 encounter, prescription or order identifier as authority — resolve it from the authenticated
 patient's own set and reject anything outside it. Forwarding an unfiltered request body is how a
@@ -51,8 +79,9 @@ control that is guaranteed to fail.
 - Separate root layout from the storefront — this application must not inherit operator script
   injection.
 - `Referrer-Policy: same-origin` on any route whose URL carries an identifier.
-- `Referrer-Policy: no-referrer` on `/claim/*`, whose URL carries a credential rather than an
-  identifier. `same-origin` would repeat it as the Referer on that page's own requests.
+- `Referrer-Policy: no-referrer` on `/claim/*`, `/create-account/*` and `/reset/*`, whose URLs
+  carry a credential rather than an identifier. `same-origin` would repeat it as the Referer on
+  that page's own requests.
 - No third-party script, font, or asset host on an authenticated page.
 - **A signed cookie proves we minted it, not that the admin still honours it.** A claim revokes
   other sessions, so a validly signed cookie can hold a dead token. `/login` asks `/patient/auth/me`
