@@ -40,6 +40,25 @@ export async function POST(request) {
   return NextResponse.json({ data: { ok: true } });
 }
 
+/**
+ * Keep-alive and liveness for SessionTimeout. Using the session is what keeps
+ * it alive admin-side, so this simply uses it — through the patient group's
+ * general limiter, never the sign-in limiter behind `/patient/auth/me`.
+ */
+export async function GET() {
+  const result = await adminFetch('/patient/session').catch(() => null);
+
+  if (!result) {
+    return NextResponse.json({ message: 'Unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // Deadlines only; the token never leaves this server.
+  return NextResponse.json(
+    result.ok ? { data: result.data } : { message: result.message ?? 'Session ended.' },
+    { status: result.ok ? 200 : result.status, headers: { 'Cache-Control': 'no-store' } }
+  );
+}
+
 export async function DELETE() {
   // Best-effort revocation upstream; the local cookie is cleared either way.
   // A sign-out that leaves the cookie because the network hiccuped is the

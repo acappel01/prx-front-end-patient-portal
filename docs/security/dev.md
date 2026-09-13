@@ -89,6 +89,18 @@ control that is guaranteed to fail.
   `/login` → `/` → "Session expired" → `/login` loop with no way to sign in. The `(portal)` layout
   must **not** make the same call: `/me` is behind the admin's `auth` limiter (10/min per IP), so a
   call per page view locks a patient out of signing in. Screens under it turn a 401 into a link.
+- **Sessions end admin-side**: 30 minutes idle and 12 hours absolute by default (the admin's Settings →
+  Patient portal). The cookie deliberately has no max-age of its own — a dead token is a 401 every
+  screen already handles. `components/shell/SessionTimeout.jsx` mirrors only the idle clock
+  (`config.portal.session.idle_minutes`) to warn two minutes before. A navigation, tap or keypress
+  sends a quiet keep-alive (`GET /api/session` → admin `GET /patient/session`) whenever the admin has
+  not heard from the tab for five minutes; the tab's clock moves only when a keep-alive succeeds, so a
+  navigation to a screen that makes no admin call (`/connect`, `/health/log`, back/forward) cannot
+  hide an expiry. The warning can come early, never late. It never extends anything the admin would
+  not. On expiry it clears the cookie and lands on `/login?expired=1`; a deliberate Sign out from the
+  warning lands on `/login`. Keep-alives go
+  through the admin's general patient limiter — never add them to `/patient/auth/me`, which is behind
+  the sign-in limiter.
 - **Every admin call carries the patient's address and browser** (`lib/adminApi.js`). The admin
   sees this server as the caller, so without it every audit IP is the portal host and every
   per-IP rate limit is one shared bucket. Exactly **one** `X-Forwarded-For` value is sent: the

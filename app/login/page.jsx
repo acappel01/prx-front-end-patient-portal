@@ -7,7 +7,9 @@ import { sessionToken } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }) {
+  const expired = (await searchParams)?.expired === '1';
+
   // A signed cookie is not a live session. The signature proves WE minted it;
   // only the admin knows whether the token inside was since revoked (a claim
   // revokes other sessions). Redirecting on the signature alone was an
@@ -35,6 +37,11 @@ export default async function LoginPage() {
 
   return (
     <AccountShell>
+      {expired ? (
+        <p className="prx-notice" role="status">
+          You were signed out after a period of inactivity, to keep your information safe. Sign in again to continue.
+        </p>
+      ) : null}
       <LoginForm />
       <p>
         <a href="/forgot">Forgot your password?</a>

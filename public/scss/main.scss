@@ -277,6 +277,51 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 
 .prx-muted { color: var(--prx-ink-2); }
 
+// Session timeout warning. Fixed over everything including the tab bar, since
+// the one thing on screen that matters is the choice it offers.
+.prx-timeout {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  // Clear of the home indicator on notched phones, as the tab bar is.
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  background: rgb(0 0 0 / .4);
+
+  &__panel {
+    width: 100%;
+    max-width: 28rem;
+    padding: 1.25rem;
+    border-radius: .75rem;
+    background: var(--prx-surface);
+    color: var(--prx-ink);
+  }
+
+  &__actions { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1rem 0 0; }
+  &__error { margin: .75rem 0 0; font-size: .875rem; }
+
+  &__secondary {
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1px solid var(--prx-line);
+    border-radius: .5rem;
+    background: transparent;
+    color: var(--prx-ink);
+    font: inherit;
+  }
+}
+
+.prx-notice {
+  margin: 0 0 1rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--prx-line);
+  border-radius: .5rem;
+  background: var(--prx-surface);
+}
+
 // Sign-in activity on Record. The time column must not squeeze the label and
 // device onto three lines at 390px, so it keeps its width and does not wrap.
 .prx-security {
@@ -286,7 +331,6 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
   // A flex child will not shrink below its longest unbreakable word, and an
   // IPv6 address is one 39-character word — mobile carriers hand those out.
   &__what { min-width: 0; overflow-wrap: anywhere; }
-  &__current { color: var(--prx-ink); font-weight: 600; white-space: nowrap; }
   &__when { flex-shrink: 0; text-align: right; white-space: nowrap; }
   &__note { margin-top: .75rem; font-size: .875rem; }
 }

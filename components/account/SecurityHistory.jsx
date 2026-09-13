@@ -59,7 +59,6 @@ function describeDevice(userAgent) {
 
 function who(event) {
   if (event.actor === 'operator') return 'by support';
-  if (event.actor === 'system') return 'automatically';
 
   return null;
 }
@@ -88,7 +87,11 @@ export default async function SecurityHistory() {
         <ul className="prx-rows">
           {events.map((event, index) => {
             const device = describeDevice(event.user_agent);
-            const detail = [device, event.ip_address, who(event)].filter(Boolean).join(' · ');
+            // "This device" leads the detail line rather than trailing the label:
+            // at 390px, bolted onto the label it broke "Signed" onto its own line.
+            const detail = [event.is_current_session ? 'This device' : null, device, event.ip_address, who(event)]
+              .filter(Boolean)
+              .join(' · ');
 
             return (
               // The admin sends no row id on purpose; the list is newest-first
@@ -96,7 +99,6 @@ export default async function SecurityHistory() {
               <li className="prx-row" key={`${event.occurred_at}-${index}`}>
                 <span className="prx-security__what">
                   {event.label}
-                  {event.is_current_session ? <span className="prx-security__current"> · This device</span> : null}
                   {detail ? (
                     <>
                       <br />
