@@ -111,6 +111,14 @@ control that is guaranteed to fail.
   challenge sends the patient back to the password. Known limit: signing in from a claim link with
   two-step on lands on Home, not back on the claim page (the claim URL carries a token and is never
   copied into a `next` parameter) — the link in the email still works.
+- **Trusted browsers.** Ticking *Trust this browser* on the code step returns an admin token that
+  `app/api/session/two-factor/route.js` stores in `prx_device` — httpOnly, Secure, Strict, signed under
+  the `device` purpose, max-age = the admin's expiry. `app/api/session/route.js` sends it with every
+  password sign-in as `trusted_device_token`; the admin decides (password first, this patient only)
+  and, on a hit, returns the renewed expiry, which re-sets the cookie's max-age — without that the
+  cookie would lapse at the original expiry however often it was used.
+  The cookie deliberately survives sign-out. A stale or revoked token is simply ignored upstream.
+  Record → Two-step verification lists trusted browsers with Remove / Remove all (two proxy entries).
 - **Two-step management** (Record → Two-step verification, `components/account/TwoFactorManager.jsx`)
   goes through four POST proxy entries. Recovery codes exist only in the confirm/regenerate response
   and component state; nothing stores them. The QR code is an admin-rendered SVG data URI. Under the

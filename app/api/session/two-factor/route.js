@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
 import { landingFor } from '@/lib/landing';
-import { challengeToken, endChallenge, startSession } from '@/lib/session';
+import { challengeToken, endChallenge, startSession, startTrustedDevice } from '@/lib/session';
 
 /**
  * The second step of a two-step sign-in: the code in, the session cookie out.
@@ -33,7 +33,11 @@ export async function POST(request) {
   const result = await adminFetch('/patient/auth/two-factor', {
     method: 'POST',
     token: '',
-    body: { challenge, ...(recoveryCode ? { recovery_code: recoveryCode } : { code }) },
+    body: {
+      challenge,
+      ...(recoveryCode ? { recovery_code: recoveryCode } : { code }),
+      ...(payload?.trust_device === true ? { trust_device: true } : {}),
+    },
   }).catch(() => null);
 
   if (!result) {
@@ -43,6 +47,10 @@ export async function POST(request) {
   if (result.ok && result.data?.token) {
     await endChallenge();
     await startSession(result.data.token);
+
+    if (result.data.trusted_device?.token) {
+      await startTrustedDevice(result.data.trusted_device.token, result.data.trusted_device.expires_at);
+    }
 
     return NextResponse.json({ data: { ok: true, next: landingFor(result.data.patient) } });
   }

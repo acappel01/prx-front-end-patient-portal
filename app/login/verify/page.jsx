@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import AccountShell from '@/components/account/AccountShell';
 import TwoFactorCodeForm from '@/components/ui/TwoFactorCodeForm';
+import { deploymentConfig } from '@/lib/adminApi';
 import { challengeToken } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -16,9 +17,11 @@ export default async function VerifyPage() {
     redirect('/login');
   }
 
+  const config = await deploymentConfig();
+
   return (
     <AccountShell>
-      <TwoFactorCodeForm />
+      <TwoFactorCodeForm trustDays={config?.portal?.two_factor?.trusted_device_days ?? 0} />
     </AccountShell>
   );
 }

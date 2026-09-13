@@ -1,3 +1,4 @@
+import TrustedDevicesList from '@/components/account/TrustedDevicesList';
 import TwoFactorManager from '@/components/account/TwoFactorManager';
 import { adminFetch } from '@/lib/adminApi';
 
@@ -49,6 +50,16 @@ export default async function SecurityPage({ searchParams }) {
         </p>
       ) : null}
       <TwoFactorManager status={data} />
+      {data.enabled ? <TrustedDevices /> : null}
     </>
   );
+}
+
+/** Only for an account with two-step on — without it there is nothing to skip. Quiet on failure. */
+async function TrustedDevices() {
+  const result = await adminFetch('/patient/trusted-devices').catch(() => null);
+
+  if (!result?.ok || !Array.isArray(result.data)) return null;
+
+  return <TrustedDevicesList devices={result.data} />;
 }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
 import { landingFor } from '@/lib/landing';
-import { endChallenge, endSession, startChallenge, startSession } from '@/lib/session';
+import { endSession, startChallenge, startSession, startTrustedDevice, trustedDeviceToken } from '@/lib/session';
 
 /**
  * Sign in and out.
@@ -22,11 +22,20 @@ export async function POST(request) {
     return NextResponse.json({ message: 'Email and password are required.' }, { status: 422 });
   }
 
+  // Read once: sent with the password, and re-set below if the admin renews it.
+  const deviceToken = await trustedDeviceToken();
+
   const result = await adminFetch('/patient/auth/login', {
     method: 'POST',
     // Explicitly no session token: this call mints one.
     token: '',
-    body: { email: payload.email, password: payload.password },
+    body: {
+      email: payload.email,
+      password: payload.password,
+      // A browser trusted after an earlier code; the admin honours it only
+      // after checking the password, and only for this account.
+      ...(deviceToken ? { trusted_device_token: deviceToken } : {}),
+    },
   });
 
   // Two-step verification on: no session yet. The challenge goes into its own
@@ -46,6 +55,13 @@ export async function POST(request) {
   }
 
   await startSession(result.data.token);
+
+  // A trusted browser skipped the code and the admin renewed its trust: extend
+  // the cookie to the renewed expiry, or it would lapse at the original one
+  // however often this browser signs in.
+  if (result.data.trusted_device?.expires_at && deviceToken) {
+    await startTrustedDevice(deviceToken, result.data.trusted_device.expires_at);
+  }
 
   return NextResponse.json({ data: { ok: true, next: landingFor(result.data.patient) } });
 }

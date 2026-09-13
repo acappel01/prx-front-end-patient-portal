@@ -9,7 +9,7 @@ import { useState } from 'react';
  * httpOnly cookie; nothing here ever sees it. `one-time-code` lets the phone's
  * own autofill offer the code, and the numeric keypad opens on mobile.
  */
-export default function TwoFactorCodeForm() {
+export default function TwoFactorCodeForm({ trustDays = 0 }) {
   const [useRecovery, setUseRecovery] = useState(false);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -19,12 +19,14 @@ export default function TwoFactorCodeForm() {
     setBusy(true);
     setError(null);
 
-    const value = new FormData(event.currentTarget).get('code');
+    const form = new FormData(event.currentTarget);
+    const value = form.get('code');
+    const trust = form.get('trust') === 'on';
 
     const response = await fetch('/api/session/two-factor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(useRecovery ? { recovery_code: value } : { code: value }),
+      body: JSON.stringify({ ...(useRecovery ? { recovery_code: value } : { code: value }), trust_device: trust }),
     }).catch(() => null);
 
     const payload = await response?.json().catch(() => null);
@@ -77,6 +79,17 @@ export default function TwoFactorCodeForm() {
           />
         )}
       </div>
+
+      {trustDays > 0 ? (
+        <>
+          <label className="prx-check">
+            <input type="checkbox" name="trust" aria-describedby="trust-hint" /> Trust this browser for {trustDays} days
+          </label>
+          <p id="trust-hint" className="prx-check__hint prx-muted">
+            Only on your own device. You&rsquo;ll still need your password.
+          </p>
+        </>
+      ) : null}
 
       {error ? (
         <p className="prx-field__error" role="alert">
