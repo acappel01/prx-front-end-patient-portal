@@ -34,11 +34,12 @@ present and is absent in production.
 | `app/api/account/{link,create,reset}/` | The three anonymous account calls. Outside the proxy, which needs a session. |
 | `app/api/session/` | Sign in and out. Exchanges a credential for an admin token server-side. |
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
+| `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
 | `lib/` | Server-only modules. `adminApi`, `session`, `portalProxy`, `theme`, `destinations`. |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |
 
-## The two request paths
+## The request paths
 
 **Server components call `adminApi` directly.** The path never reaches the browser, so most reads
 need no proxy entry at all.
@@ -49,6 +50,10 @@ list working.
 
 Adding an entry has one precondition: the admin must pin every identifier in that path to the
 session's own record. If it forwards a caller-supplied id, fix the admin first.
+
+**Two dedicated routes sit outside that proxy** because they are not JSON relays: `app/api/session/*`
+(sign-in, two-step code, keep-alive — they set cookies) and `app/api/intake/[id]` (the multipart
+upload, with its own size and type limits).
 
 ## What the admin owns
 

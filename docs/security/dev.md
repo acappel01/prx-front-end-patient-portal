@@ -165,3 +165,14 @@ control that is guaranteed to fail.
 
 Clinical values reach the browser only where a screen renders them. Nothing clinical is logged,
 sent to an analytics destination, or placed in a URL.
+
+## Uploads
+
+The only upload is sending what a held visit needs (`/care/intake/[id]`). It does **not** go through
+the generic proxy: `app/api/intake/[id]/route.js` reads the body with a 42 MB cap (a declared
+`Content-Length` over it is refused before reading), keeps only the named text fields and the four
+photo fields, refuses any photo that is not JPEG/PNG/WebP or is over 10 MB, renames files to neutral
+names (`id_front.jpg` — a patient's own filename travels nowhere), and sends a freshly built form to
+the admin, which validates everything again (raster types by content, SVG refused). Nothing is
+stored on either side; no antivirus scan runs (operator decision 2026-09-13 — the files are never
+stored by us and are passed to the clinical provider).

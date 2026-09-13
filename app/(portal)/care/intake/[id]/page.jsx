@@ -1,56 +1,62 @@
+import { notFound, redirect } from 'next/navigation';
+
+import ProvideInformationForm from '@/components/care/ProvideInformationForm';
+import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
 
 export const dynamic = 'force-dynamic';
 
+const UUID = /^[0-9a-fA-F-]{36}$/;
+
 /**
- * The destination of the tier-1 "documents needed" card.
+ * What a held visit still needs from the patient — and a way to send it.
  *
- * It exists because that card is the most important thing in the product and
- * it previously pointed at a 404 — but read the honesty note below before
- * extending it.
- *
- * WHY THIS SCREEN CANNOT YET FINISH THE JOB. Outstanding identity items come in
- * two kinds. File items (a photo of an ID) are satisfiable: the provider has an
- * endpoint that accepts an upload. Text items (licence number, state of issue)
- * are NOT — the only API that writes intake answers persists them under a
- * different key than the provider's own completeness gate reads, so submitting
- * one returns 200, writes an audit entry, and leaves the encounter held exactly
- * as it was. It is on the change request.
- *
- * So this screen separates the two and says which is which. A screen that
- * listed all three under one "upload" button would send someone into a loop
- * they cannot get out of, and they would blame themselves for it. Being
- * straight about the wall is worth more than a control that quietly fails.
+ * Driven by the provider's own requirements for this visit
+ * (`GET /patient/encounters/{id}/requirements`), with each item's wording from
+ * the operator's settings where they wrote one. The form appears only while the
+ * provider will accept it (`resolvable_via_api`): a visit held for any other
+ * reason, or already with a clinician, shows what is outstanding and points to
+ * the care team instead of offering a form that would be refused.
  */
-export default async function IntakePage({ params }) {
+export default async function IntakePage({ params, searchParams }) {
   const { id } = await params;
+  const saved = (await searchParams)?.saved === '1';
 
-  const { ok, status, data } = await adminFetch('/patient/home');
+  if (!UUID.test(id)) notFound();
 
-  if (status === 401) {
+  const { ok, status, data, code, requestId } = await adminFetch(`/patient/encounters/${id}/requirements`);
+
+  if (status === 401) redirect('/login');
+  if (status === 403 && code === 'two_factor_setup_required') redirect('/record/security?required=1');
+
+  const allSatisfied = ok && (data?.items ?? []).every((item) => item.satisfied);
+  // The provider writes its message once and never clears it, so it only means
+  // "we are asking now" while the visit is actually held for information.
+  const askingNow = ok && data?.status === 'requires_information' && Boolean(data?.info_request_message);
+
+  // A provider can ask for more with only a message (a follow-up after review):
+  // nothing is "missing", but the patient must see what was asked and how to
+  // answer — never "nothing outstanding".
+  if (allSatisfied && askingNow) {
     return (
       <>
-        <h1>Session expired</h1>
-        <p className="prx-muted">
-          <a href="/login">Sign in again</a> to continue.
+        <h1>Your provider needs more information</h1>
+        <p className="prx-task__body">{data.info_request_message}</p>
+        <p>
+          <a className="prx-task__cta" href="/talk">
+            Message your care team
+          </a>
         </p>
       </>
     );
   }
 
-  const task = ok
-    ? (data?.tasks ?? []).find((candidate) => candidate.id === `encounter:${id}:blocking`)
-    : null;
-
-  if (!task) {
-    // Either it is finished or it was never outstanding. Both are good news,
-    // and neither is an error to apologise for.
+  if (status === 404 || allSatisfied) {
+    // Finished, or never outstanding. Both are good news, not an error.
     return (
       <>
         <h1>Nothing outstanding</h1>
-        <p className="prx-stack__clear">
-          There is nothing left to send for this visit.
-        </p>
+        <p className="prx-stack__clear">There is nothing left to send for this visit.</p>
         <p>
           <a href="/">Back to your care</a>
         </p>
@@ -58,64 +64,61 @@ export default async function IntakePage({ params }) {
     );
   }
 
-  const actionable = task.outstanding_actionable ?? [];
-  const blocked = task.outstanding_blocked ?? [];
+  if (!ok) {
+    return (
+      <>
+        <h1>What your visit needs</h1>
+        <p className="prx-muted">We can&rsquo;t load this right now. Please try again in a moment.</p>
+        {status >= 500 ? <Reference id={requestId} /> : null}
+      </>
+    );
+  }
+
+  const outstanding = data.items.filter((item) => !item.satisfied);
 
   return (
     <>
-      <h1>{task.title}</h1>
-      <p className="prx-task__body">{task.body}</p>
+      <h1>What your visit needs</h1>
+      {saved ? (
+        <p className="prx-notice" role="status">
+          Saved. Your visit still needs the items below.
+        </p>
+      ) : null}
+      {askingNow ? <p className="prx-task__body">{data.info_request_message}</p> : null}
 
-      {typeof task.progress_pct === 'number' ? (
+      {typeof data.completeness_pct === 'number' ? (
         <div
           className="prx-task__meter"
           role="progressbar"
-          aria-valuenow={task.progress_pct}
+          aria-valuenow={data.completeness_pct}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-label="Intake completion"
         >
-          <span style={{ width: `${task.progress_pct}%` }} />
+          <span style={{ width: `${data.completeness_pct}%` }} />
         </div>
       ) : null}
 
-      {actionable.length > 0 ? (
-        <section className="prx-card" aria-labelledby="can-send">
-          <h2 id="can-send">You can send these now</h2>
+      {data.resolvable_via_api ? (
+        <ProvideInformationForm encounterId={id} items={outstanding} />
+      ) : (
+        <section className="prx-card" aria-labelledby="with-team">
+          <h2 id="with-team">Still needed</h2>
           <ul className="prx-rows">
-            {actionable.map((slug) => (
-              <li className="prx-row" key={slug}>
-                {/* The label comes from the admin, never from a map compiled in
-                    here — `drivers_license_or_identification_state_of_issue` is
-                    not something to show a person. Until that lands the raw slug
-                    is at least honest rather than invented. */}
-                <span>{task.labels?.[slug] ?? slug}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="prx-muted">Uploading is not switched on yet — it is the next thing being built.</p>
-        </section>
-      ) : null}
-
-      {blocked.length > 0 ? (
-        <section className="prx-card" aria-labelledby="ask-provider">
-          <h2 id="ask-provider">Your care team needs to add these for you</h2>
-          <ul className="prx-rows">
-            {blocked.map((slug) => (
-              <li className="prx-row" key={slug}>
-                <span>{task.labels?.[slug] ?? slug}</span>
+            {outstanding.map((item) => (
+              <li className="prx-row" key={item.slug}>
+                <span>{item.label}</span>
               </li>
             ))}
           </ul>
           <p className="prx-muted">
-            These can&rsquo;t be submitted from here yet. Message your care team and they can add
-            them for you.
+            Your care team will let you know how to send these. If you have them ready, send them a message.
           </p>
           <a className="prx-task__cta" href="/talk">
             Message your care team
           </a>
         </section>
-      ) : null}
+      )}
     </>
   );
 }
