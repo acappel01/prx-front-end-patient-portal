@@ -109,3 +109,16 @@ from the portal framework spec:
 
 Blood pressure, heart rate and glucose charts appear only once a reading of that kind exists. When the
 provider returned 1000 readings (the admin's cap), a line says the charts show the most recent ones.
+
+
+### September 14 presentation qualification
+
+Single and flat readings were qualified at 320/390/1280 px with a goal equal to the latest reading. The chart keeps a visible ring at the latest reading and a nonzero value range. The dashed goal is layered above reading strokes and below endpoint rings so a flat reading cannot hide it. Goal labels now include `lbs`, sit farther above the endpoint, and have a surface-colored outline to remain legible when another line crosses behind them. Headers can wrap at narrow widths. Axes and the secondary blood-pressure line use the readable secondary-ink token rather than the faint decorative-ink token. The visible date range is also available in the accessibility tree and uses the patient's local dates; the SVG description no longer announces competing UTC dates. Synthetic fixtures cross midnight UTC to verify this distinction.
+
+The repeatable built-app browser harness and its optional Playwright setup are documented in `docs/orders/dev.md`. It checks finite chart geometry, accessible chart names, goal summaries and local dates. This is browser/accessibility-tree qualification, not a claim of testing spoken output on every screen reader.
+
+### Remaining labels and labs prerequisites
+
+Weight goals are the existing patient-owned goal contract. The public `/health-goals` catalog is intake segmentation, not evidence of a patient-owned clinical goals endpoint. Additional clinical goal labels need an explicit admin projection before adding portal controls.
+
+Read-only PRX source checked September 14 exposes `GET /api/v1/patients/{patientChartId}/labs` under `auth:sanctum` and `ability:patient:read`. `LabOrderController::indexForChart` forces the chart filter and delegates to its tenant-scoped list; patient callers with no client/org affiliation are constrained to their own `patientChart`. The list returns status and dates, plus identifiers/billing fields that must be removed by an admin whitelist. It does **not** return result values or panel names, even with its accepted includes. The admin currently exposes no `/patient/labs` projection. A separate admin increment must derive chart identity from the authenticated Patient, use the established patient-token path, whitelist fields, bound pagination and test wrong-chart ownership before this portal adds a lab history. Result details require separate detail-route authorization/projection qualification. No provider or served data was changed.

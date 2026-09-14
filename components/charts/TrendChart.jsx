@@ -40,7 +40,7 @@ import LocalTime from '@/components/ui/LocalTime';
 
 const WIDTH = 320;
 const HEIGHT = 150;
-const PAD = { top: 14, right: 14, bottom: 10, left: 40 };
+const PAD = { top: 24, right: 14, bottom: 10, left: 40 };
 
 function round(value) {
   return Math.round(value * 10) / 10;
@@ -99,10 +99,11 @@ export default function TrendChart({ title, lines, target = null, summary, headl
         aria-describedby={`${titleId}-desc`}
       >
         {/* The name is the measurement and its latest value; the description is
-            the period. The summary sentence is the visible figcaption, so it is
+            the number of readings. The local date range is visible below; the
+            summary sentence is the visible figcaption, so it is
             not repeated here for a screen reader to hear twice. */}
         <title id={`${titleId}-title`}>{`${title}, latest ${headline}`}</title>
-        <desc id={`${titleId}-desc`}>{`Readings from ${firstAt.slice(0, 10)} to ${lastAt.slice(0, 10)}.`}</desc>
+        <desc id={`${titleId}-desc`}>{span === 0 ? 'Readings at one recorded time.' : 'Readings plotted proportionally over time. The date range follows the chart.'}</desc>
 
         <text className="prx-chart__axis" x={PAD.left - 6} y={PAD.top + 4} textAnchor="end">
           {round(high)}
@@ -112,12 +113,17 @@ export default function TrendChart({ title, lines, target = null, summary, headl
         </text>
         <line className="prx-chart__baseline" x1={PAD.left} x2={WIDTH - PAD.right} y1={HEIGHT - PAD.bottom} y2={HEIGHT - PAD.bottom} />
 
+        {/* Draw the goal over the reading lines so a flat series at the goal
+            cannot hide its dashes; endpoint rings remain on top of both. */}
+        {lines.map((line) => line.points.length > 1 ? (
+          <g key={line.label} className={`prx-chart__line ${line.tone === 'muted' ? 'prx-chart__line--muted' : ''}`}>
+            <polyline points={line.points.map((point) => `${x(point.at)},${y(point.value)}`).join(' ')} />
+          </g>
+        ) : null)}
+
         {target ? (
           <g className="prx-chart__target">
             <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(target.value)} y2={y(target.value)} />
-            <text x={WIDTH - PAD.right} y={y(target.value) - 4} textAnchor="end">
-              {target.label}
-            </text>
           </g>
         ) : null}
 
@@ -129,19 +135,22 @@ export default function TrendChart({ title, lines, target = null, summary, headl
 
           return (
             <g key={line.label} className={`prx-chart__line ${tone}`}>
-              {line.points.length > 1 ? (
-                <polyline points={line.points.map((point) => `${x(point.at)},${y(point.value)}`).join(' ')} />
-              ) : null}
               <circle className="prx-chart__ring" cx={x(latest.at)} cy={y(latest.value)} r="5" />
               <circle className="prx-chart__dot" cx={x(latest.at)} cy={y(latest.value)} r="2.5" />
             </g>
           );
         })}
+        {target ? (
+          <text className="prx-chart__target-label" x={WIDTH - PAD.right} y={y(target.value) - 10} textAnchor="end">
+            {target.label}
+          </text>
+        ) : null}
       </svg>
 
-      <div className="prx-chart__range prx-muted" aria-hidden="true">
+      <div className="prx-chart__range prx-muted">
+        <span className="prx-visually-hidden">{span > 0 ? 'From ' : 'Recorded '}</span>
         <LocalTime value={firstAt} format="date" />
-        {span > 0 ? <LocalTime value={lastAt} format="date" /> : null}
+        {span > 0 ? <span><span className="prx-visually-hidden">to </span><LocalTime value={lastAt} format="date" /></span> : null}
       </div>
 
       {lines.length > 1 ? (

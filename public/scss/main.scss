@@ -714,16 +714,21 @@ h2[tabindex='-1']:focus { outline: none; }
   margin: 0 0 .75rem;
   max-width: 40rem;
 
-  &__head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+  &__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 1rem; }
   &__title { font-size: .95rem; margin: 0; color: var(--prx-ink-2); font-weight: 600; }
   &__value { margin: 0; font-size: 1.5rem; font-weight: 700; color: var(--prx-ink); }
   &__plot { display: block; width: 100%; height: auto; margin: .5rem 0 .25rem; overflow: visible; }
-  &__axis { font-size: 9px; fill: var(--prx-ink-3); }
+  &__axis { font-size: 9px; fill: var(--prx-ink-2); }
   &__baseline { stroke: var(--prx-line); stroke-width: 1; }
 
   &__target {
     line { stroke: var(--prx-ok); stroke-width: 1.5; stroke-dasharray: 4 4; }
-    text { font-size: 9px; fill: var(--prx-ok); font-weight: 600; }
+  }
+
+  &__target-label {
+    font-size: 11px; fill: var(--prx-ok); font-weight: 600;
+    // Keep the label legible where another series crosses behind it.
+    paint-order: stroke; stroke: var(--prx-surface); stroke-width: 3; stroke-linejoin: round;
   }
 
   &__line {
@@ -733,9 +738,9 @@ h2[tabindex='-1']:focus { outline: none; }
   }
 
   &__line--muted {
-    polyline { stroke: var(--prx-ink-3); stroke-dasharray: 2 3; }
-    .prx-chart__ring { stroke: var(--prx-ink-3); }
-    .prx-chart__dot { fill: var(--prx-ink-3); }
+    polyline { stroke: var(--prx-ink-2); stroke-dasharray: 2 3; }
+    .prx-chart__ring { stroke: var(--prx-ink-2); }
+    .prx-chart__dot { fill: var(--prx-ink-2); }
   }
 
   &__range { display: flex; justify-content: space-between; font-size: .8rem; }
@@ -761,7 +766,7 @@ h2[tabindex='-1']:focus { outline: none; }
     border-top: 2px solid var(--prx-brand);
   }
 
-  &__key--muted::before { border-top: 2px dashed var(--prx-ink-3); }
+  &__key--muted::before { border-top: 2px dashed var(--prx-ink-2); }
 
   &__summary { margin: .5rem 0 0; color: var(--prx-ink); }
 }
@@ -771,7 +776,9 @@ h2[tabindex='-1']:focus { outline: none; }
   min-width: 0;
   h2 { font-size: 1.125rem; margin: 0 0 .5rem; }
   h3 { font-size: 1rem; margin: 0 0 .5rem; }
-  p { overflow-wrap: anywhere; }
+  h2, h3, p, dd { overflow-wrap: anywhere; }
+  &__order > div { min-width: 0; }
+  section > .prx-rows a { display: inline-flex; min-height: 44px; align-items: center; }
   a:focus-visible { outline: 2px solid var(--prx-brand); outline-offset: 4px; }
   &__order { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1.5rem; }
   &__amount { min-width: 0; }

@@ -37,7 +37,7 @@ export default async function PurchasesPage({ searchParams }) {
                   </div>
                   <div className="prx-purchases__amount">
                     <p><span className="prx-muted">Order total </span>{formatMoney(order.total_amount, order.currency)}</p>
-                    <a className="prx-task__cta" href={`${PURCHASES_PATH}/${order.uuid}`}>View order<span className="prx-visually-hidden"> placed {order.placed_at ?? 'on an unrecorded date'}</span></a>
+                    <a className="prx-task__cta" href={`${PURCHASES_PATH}/${order.uuid}`}>View order<span className="prx-visually-hidden"> placed {order.placed_at ? <LocalTime value={order.placed_at} /> : 'on an unrecorded date'}</span></a>
                   </div>
                 </li>
               ))}

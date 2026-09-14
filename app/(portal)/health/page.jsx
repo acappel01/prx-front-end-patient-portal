@@ -83,7 +83,7 @@ function Charts({ data }) {
           title="Weight"
           headline={`${number(weight.at(-1).value)} lbs`}
           lines={[{ label: 'Weight', points: weight }]}
-          target={goal != null ? { value: goal, label: `Goal ${number(goal)}` } : null}
+          target={goal != null ? { value: goal, label: `Goal ${number(goal)} lbs` } : null}
           summary={weightSummary(weight, goal)}
         />
       ) : data?.period === '1year' && (data?.items ?? []).some((vital) => vital.weight != null) ? (
