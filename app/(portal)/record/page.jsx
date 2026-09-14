@@ -27,7 +27,7 @@ export default function RecordPage() {
     <>
       <Screen title="Your record" path="/patient/orders" empty="No orders yet.">
         {(rows) => (
-          <ul className="prx-rows">
+          <ul className="prx-rows" aria-label="Clinical order history">
             {rows.map((order) => (
               <li className="prx-row" key={order.id}>
                 <span>
@@ -41,6 +41,11 @@ export default function RecordPage() {
           </ul>
         )}
       </Screen>
+      <section className="prx-card" aria-labelledby="site-orders">
+        <h2 id="site-orders">Orders from this site</h2>
+        <p className="prx-muted">View purchases connected to your account. This history is separate from the clinical orders above and may overlap.</p>
+        <a className="prx-task__cta" href="/record/purchases">View orders from this site</a>
+      </section>
       <ProfileDetails />
       <TwoFactorStatusLink />
       <SecurityHistory />

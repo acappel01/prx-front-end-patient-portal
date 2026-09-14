@@ -11,7 +11,14 @@ import { adminFetch } from '@/lib/adminApi';
  * be missed and throw a 500 onto a clinical page.
  */
 export default async function Screen({ title, path, empty, emptyAction, action, children }) {
-  const { ok, status, data, code, requestId } = await adminFetch(path);
+  let response;
+  try {
+    response = await adminFetch(path);
+  } catch {
+    // Keep surrounding navigation/account content usable during a transport failure.
+    response = { ok: false, status: 503, data: null };
+  }
+  const { ok, status, data, code, requestId } = response;
 
   // The install requires two-step verification and this account lacks it.
   if (status === 403 && code === 'two_factor_setup_required') {

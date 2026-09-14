@@ -765,3 +765,20 @@ h2[tabindex='-1']:focus { outline: none; }
 
   &__summary { margin: .5rem 0 0; color: var(--prx-ink); }
 }
+
+// Local commerce remains a separate, readable history within Record.
+.prx-purchases {
+  min-width: 0;
+  h2 { font-size: 1.125rem; margin: 0 0 .5rem; }
+  h3 { font-size: 1rem; margin: 0 0 .5rem; }
+  p { overflow-wrap: anywhere; }
+  a:focus-visible { outline: 2px solid var(--prx-brand); outline-offset: 4px; }
+  &__order { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1.5rem; }
+  &__amount { min-width: 0; }
+  &__pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin: 1rem 0; }
+  &__pagination a { display: inline-flex; min-height: 44px; align-items: center; }
+  &__facts { margin: 1rem 0; }
+  &__facts > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .25rem 1rem; padding: .5rem 0; border-bottom: 1px solid var(--prx-line); }
+  &__facts dd { margin: 0; overflow-wrap: anywhere; }
+  &__reference { overflow-wrap: anywhere; }
+}

@@ -14,6 +14,7 @@ gitignored. Do not add them here.
 | [Approvals](approvals/dev.md) | the provider-added item accept/decline flow | [operator guide](approvals/user.md) |
 | [Tracking](tracking/dev.md) | why conversions fire server-side only | — |
 | [Messaging](messaging/dev.md) | threads, polling with the provider's cursor, pausing, starting a conversation | — |
+| [Orders](orders/dev.md) | local commerce history, detail, pagination and ownership boundaries | [operator guide](orders/user.md) |
 | [Vitals](vitals/dev.md) | capture and list, and why a failed save never offers a retry | — |
 
 - [`getting-started/dev.md`](getting-started/dev.md) — stack, how to run it, where things live, how to add a screen
