@@ -61,3 +61,9 @@ Start with [`docs/README.md`](docs/README.md).
 Documented ahead of code. The shell, auth and read-only views are unblocked and can start now;
 money-touching screens wait on two provider endpoints that do not yet exist (external reversal
 recording, and re-pointing an authorization reference). See `docs/approvals/dev.md`.
+
+## Fork
+
+Fork this along with PRX-Client-Backend-Framework https://github.com/acappel01/PRX-Client-Backend-Framework 
+which contains the complete documentation set to allow a full trifecta of Admin/Patient Portal/Complete Ecommerce Front End
+
