@@ -1,6 +1,8 @@
 import TrendChart from '@/components/charts/TrendChart';
 import LocalTime from '@/components/ui/LocalTime';
 import Screen from '@/components/ui/Screen';
+import { deploymentConfig } from '@/lib/adminApi';
+import { labsEnabled } from '@/lib/labHistory.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -166,9 +168,12 @@ function measurements(vital) {
 
 export default async function HealthPage({ searchParams }) {
   const requested = (await searchParams)?.period;
+  const config = await deploymentConfig();
   const period = PERIODS.some((p) => p.key === requested) ? requested : '1year';
 
   return (
+    <>
+    {labsEnabled(config) ? <p className="prx-screen__action"><a href="/health/labs">View lab orders</a></p> : null}
     <Screen
       title="Your progress"
       path={`/patient/health/series?period=${period}`}
@@ -211,5 +216,6 @@ export default async function HealthPage({ searchParams }) {
         </>
       )}
     </Screen>
+    </>
   );
 }

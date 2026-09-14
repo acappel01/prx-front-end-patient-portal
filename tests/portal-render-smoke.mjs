@@ -23,11 +23,28 @@ const detail = { ...summary, subtotal: '149.50', tax_amount: '0.00', shipping_am
   shipments: [{ id: 1, status: 'in_transit', carrier: 'Fixture carrier', tracking_number: 'TRACK-EXAMPLE',
     tracking_url: 'javascript:alert(1)', shipped_at: '2026-09-14T11:00:00Z', delivered_at: null }],
   metadata: { clinical: 'PRIVATE_FIXTURE_NEVER_RENDER' }, shipping_address: 'PRIVATE_FIXTURE_NEVER_RENDER' };
+const labOrder = { id: 'fixture-lab', lab_order_number: 'LAB-FIXTURE', status: 'awaiting_external_review', collection_method: 'walk_in_draw',
+  ordered_at: '2026-09-14T01:00:00Z', results_received_at: null, completed_at: null, created_at: '2026-09-13T01:00:00Z',
+  patient_chart_id: 'PRIVATE_FIXTURE_NEVER_RENDER', lab_cost: 'PRIVATE_FIXTURE_NEVER_RENDER',
+  results: ['PRIVATE_FIXTURE_NEVER_RENDER'], checkout_url: 'https://forbidden-admin-host.invalid/' };
 const admin = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   calls.push({ path: url.pathname, search: url.search, auth: req.headers.authorization });
   const json = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   if (url.pathname === '/api/v1/config') return json(200, { data: { brand: { name: 'Fixture portal' }, portal: { modules: {}, session: {} } } });
+  if (url.pathname === '/api/v1/patient/labs') {
+    if (req.headers.authorization !== `Bearer ${token}`) return json(401, {});
+    if (mode === 'lab-unlinked') return json(409, { code: 'no_linked_chart' });
+    if (mode === 'lab-expired') return json(401, {});
+    if (mode === 'lab-forbidden') return json(403, {});
+    if (mode === 'lab-two-factor') return json(403, { code: 'two_factor_setup_required' });
+    if (mode === 'lab-unavailable') return json(502, { message: 'PRIVATE_FIXTURE_NEVER_RENDER' });
+    if (mode === 'lab-disconnect') return req.socket.destroy();
+    if (mode === 'lab-slow') await new Promise((resolve) => setTimeout(resolve, 1200));
+    const page = Number(url.searchParams.get('page') || 1);
+    return json(200, { data: { items: mode === 'lab-empty' ? [] : [labOrder],
+      pagination: { current_page: page, per_page: 20, last_page: mode === 'lab-empty' ? 1 : 2, total: mode === 'lab-empty' ? 0 : 21 } } });
+  }
   if (url.pathname === '/api/v1/patient/health/series') {
     const dates = mode === 'single' ? ['2026-09-14T01:00:00Z'] : ['2026-01-01T01:00:00Z', '2026-09-14T01:00:00Z'];
     return json(200, { data: { period: '1year', goal: { weight: 185 },
@@ -158,6 +175,37 @@ try {
   assert.equal(result.response.status, 200);
   assert.match(result.html, /View orders from this site/);
   console.log('PASS local history navigation survives clinical transport failure');
+  before = calls.length;
+  result = await request('/health/labs', false);
+  assert.ok(result.response.status === 307 || result.html.includes('/login'));
+  assert.ok(!calls.slice(before).some((call) => call.path.endsWith('/patient/labs')));
+  mode = 'labs';
+  result = await request('/health/labs?chart_id=other&per_page=100');
+  assert.match(result.html, /LAB-FIXTURE/);
+  assert.match(result.html, /Awaiting external review/);
+  assert.match(result.html, /does not include lab results or interpretation/);
+  assert.match(result.html, /health\/labs\?page=2/);
+  assert.ok(calls.some((call) => call.path.endsWith('/patient/labs') && call.search === '?page=1&per_page=20' && call.auth === `Bearer ${token}`));
+  result = await request('/health/labs?page=2');
+  assert.match(result.html, /Previous page/);
+  assert.doesNotMatch(result.html, />Next page</);
+  before = calls.length;
+  result = await request('/health/labs?page=0');
+  assert.match(result.html, /That page is not available/);
+  assert.ok(!calls.slice(before).some((call) => call.path.endsWith('/patient/labs')));
+  for (const [state, text] of [['lab-empty', 'No lab orders are available'], ['lab-unlinked', 'Connect your medical record'],
+    ['lab-expired', 'Sign in again'], ['lab-forbidden', 'Sign out, then sign in again'],
+    ['lab-unavailable', 'load your lab orders right now'], ['lab-disconnect', 'load your lab orders right now']]) {
+    mode = state;
+    result = await request('/health/labs');
+    assert.ok(result.html.includes(text));
+    assert.doesNotMatch(result.html, /LAB-FIXTURE/);
+  }
+  mode = 'lab-two-factor';
+  result = await request('/health/labs');
+  assert.ok(result.response.headers.get('location')?.includes('/record/security?required=1') || result.html.includes('/record/security?required=1'));
+  console.log('PASS labs: authenticated bounded path, local pagination, invalid page without fetch, private fields omitted, empty/chart/session/ability/2FA/upstream failures');
+
   if (process.env.PORTAL_PLAYWRIGHT_MODULE) {
     const { chromium } = await import(process.env.PORTAL_PLAYWRIGHT_MODULE);
     const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
@@ -182,8 +230,24 @@ try {
       await page.goto(base + '/record/purchases', { waitUntil: 'commit' });
       await page.getByRole('status').filter({ hasText: 'Loading your orders' }).waitFor();
       await page.getByRole('link', { name: /^View order/ }).waitFor();
+      mode = 'lab-slow';
+      await page.goto(base + '/health/labs', { waitUntil: 'commit' });
+      await page.getByRole('status').filter({ hasText: 'Loading your lab orders' }).waitFor();
+      await page.getByRole('heading', { name: 'LAB-FIXTURE', exact: true }).waitFor();
+      labOrder.lab_order_number = 'LABORDER'.repeat(40);
       for (const width of [320, 390, 1280]) {
         await page.setViewportSize({ width, height: 812 });
+        mode = 'labs';
+        await page.goto(base + '/health/labs');
+        await page.getByRole('heading', { name: labOrder.lab_order_number, exact: true }).waitFor();
+        await page.waitForFunction(() => document.querySelector('.prx-labs time')?.textContent.includes('Sep 13'));
+        await fit();
+        assert.ok((await page.locator('.prx-labs').ariaSnapshot()).includes('Awaiting external review'));
+        await page.getByRole('link', { name: 'Next page', exact: true }).focus();
+        await page.keyboard.press('Enter');
+        await page.getByText('Page 2 of 2', { exact: true }).waitFor();
+        await fit();
+        await screenshot(`labs-${width}`);
         mode = 'list';
         await page.goto(base + '/record/purchases');
         await page.getByRole('link', { name: /^View order/ }).waitFor();
