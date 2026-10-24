@@ -13,6 +13,25 @@ import { useEffect, useState } from 'react';
  * Renders the server's own text until mounted, so the markup does not differ
  * between server and client and there is no hydration flash.
  */
+const plural = (count, unit) => `in ${count} ${unit}${count === 1 ? '' : 's'}`;
+
+/**
+ * Seconds for the last five minutes, minutes up to the hour, hours up to two
+ * days, then days. An approval window is 48 hours, and "in 1798 min" is a
+ * number nobody can read at a glance.
+ */
+function format(remaining) {
+  const totalSeconds = Math.floor(remaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (minutes < 5) return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+  if (minutes < 60) return `in ${minutes} min`;
+  if (hours < 48) return plural(hours, 'hour');
+
+  return plural(Math.floor(hours / 24), 'day');
+}
+
 export default function Countdown({ deadline, fallback }) {
   const [label, setLabel] = useState(fallback);
 
@@ -32,14 +51,7 @@ export default function Countdown({ deadline, fallback }) {
         return;
       }
 
-      const totalSeconds = Math.floor(remaining / 1000);
-      const minutes = Math.floor(totalSeconds / 60);
-
-      setLabel(
-        minutes < 5
-          ? `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`
-          : `in ${minutes} min`
-      );
+      setLabel(format(remaining));
     };
 
     tick();

@@ -12,6 +12,7 @@ gitignored. Do not add them here.
 | [Architecture](architecture/dev.md) | structure, boundaries, what this app may not own | — |
 | [Security](security/dev.md) | session, scoping, the rules that cannot be relaxed | — |
 | [Approvals](approvals/dev.md) | the provider-added item accept/decline flow | [operator guide](approvals/user.md) |
+| [Record](record/dev.md) | shipments, medications/allergies/conditions, message preferences, record export, past visits | — |
 | [Tracking](tracking/dev.md) | why conversions fire server-side only | — |
 | [Messaging](messaging/dev.md) | threads, polling with the provider's cursor, pausing, starting a conversation | — |
 | [Vitals](vitals/dev.md) | capture and list, and why a failed save never offers a retry | — |
