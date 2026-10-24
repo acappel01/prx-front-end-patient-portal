@@ -7,6 +7,33 @@
 // no literal brand colour in this file. Greys are structural rather than brand,
 // so they carry a token but a sensible default.
 
+// The portal's tokens, mapped from the admin's theme (`theme.tokens.vars`,
+// set on :root by app/layout.js). Each default is neutral, greys and one blue,
+// so an unconfigured deployment renders legibly without looking like a brand.
+// If a screenshot of the unconfigured portal looks designed, someone has put a
+// brand in the skeleton.
+:root {
+  --font-body-fallback: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display-fallback: var(--font-body-fallback);
+
+  --prx-brand: var(--color-primary, #2563eb);
+  --prx-brand-ink: var(--color-primary-contrast, #ffffff);
+  // Urgency is the one colour the operator must be able to move: it is the
+  // tier-0 card. The admin's Danger, Warning and Success roles drive these.
+  --prx-urgent: var(--color-danger, #b91c1c);
+  --prx-warn: var(--color-warning, #b45309);
+  --prx-warn-wash: #fffbeb;
+  --prx-ok: var(--color-success, #15803d);
+  --prx-bg: var(--color-background, #f6f7f9);
+  --prx-surface: #ffffff;
+  --prx-ink: var(--color-text, #111827);
+  --prx-ink-2: var(--color-text-muted, #4b5563);
+  --prx-ink-3: #9ca3af;
+  --prx-line: var(--color-border, #e5e7eb);
+  --prx-font-body: var(--font-body, var(--font-body-fallback));
+  --prx-font-display: var(--font-display, var(--prx-font-body));
+}
+
 *,
 *::before,
 *::after { box-sizing: border-box; }
@@ -21,6 +48,8 @@ body {
   font-size: 16px;      // never below 16px on an input — iOS zooms otherwise
   line-height: 1.5;
 }
+
+a { color: var(--prx-brand); }
 
 h1, h2, h3 { font-family: var(--prx-font-display); margin: 0 0 .5rem; line-height: 1.25; }
 
@@ -273,6 +302,26 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 
   &:last-child { border-bottom: 0; }
   &__meta { color: var(--prx-ink-2); font-size: .875rem; }
+}
+
+// An order: the row, then a link per parcel when it has shipped.
+.prx-order {
+  border-bottom: 1px solid var(--prx-line);
+
+  &:last-child { border-bottom: 0; }
+  .prx-row { border-bottom: 0; }
+
+  &__tracking {
+    list-style: none;
+    margin: -.25rem 0 0;
+    padding: 0 0 .75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .25rem 1rem;
+    font-size: .875rem;
+
+    a { color: var(--prx-brand); min-height: 44px; display: inline-flex; align-items: center; }
+  }
 }
 
 .prx-muted { color: var(--prx-ink-2); }
@@ -764,4 +813,17 @@ h2[tabindex='-1']:focus { outline: none; }
   &__key--muted::before { border-top: 2px dashed var(--prx-ink-3); }
 
   &__summary { margin: .5rem 0 0; color: var(--prx-ink); }
+}
+
+// ── Signed-out pages ──────────────────────────────────────────────────────
+
+// The header logo width the admin set (Settings > Theme > Logo size), phone
+// first, so the portal's sign-in page matches the website.
+.prx-account__brand { margin: 0 0 1.25rem; }
+
+.prx-account__logo {
+  display: block;
+  width: var(--logo-header-w, 140px);
+  max-width: 100%;
+  height: auto;
 }

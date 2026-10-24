@@ -2,7 +2,9 @@ import ProfileDetails from '@/components/account/ProfileDetails';
 import SecurityHistory from '@/components/account/SecurityHistory';
 import TwoFactorStatusLink from '@/components/account/TwoFactorStatusLink';
 import Screen from '@/components/ui/Screen';
+import LocalTime from '@/components/ui/LocalTime';
 import SignOutButton from '@/components/ui/SignOutButton';
+import { money } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,13 +31,40 @@ export default function RecordPage() {
         {(rows) => (
           <ul className="prx-rows">
             {rows.map((order) => (
-              <li className="prx-row" key={order.id}>
-                <span>
-                  {order.order_number}
-                  <br />
-                  <span className="prx-row__meta">{order.shipping_status ?? order.workflow_status}</span>
-                </span>
-                <span className="prx-row__meta">{order.grand_total}</span>
+              <li className="prx-order" key={order.id ?? order.order_number}>
+                <div className="prx-row">
+                  <span>
+                    {/* Lead with what is happening to it, in the admin's words. */}
+                    <strong>{order.status_label ?? 'Order received'}</strong>
+                    <br />
+                    <span className="prx-row__meta">
+                      {order.order_number}
+                      {order.created_at ? (
+                        <>
+                          {' · '}
+                          <LocalTime value={order.created_at} format="date" />
+                        </>
+                      ) : null}
+                    </span>
+                  </span>
+                  <span className="prx-row__meta">{money(order.grand_total, order.currency)}</span>
+                </div>
+                {/* One order can ship in several parcels, each with its own link. */}
+                {(order.tracking ?? []).length > 0 ? (
+                  <ul className="prx-order__tracking">
+                    {order.tracking.map((parcel, index) => (
+                      <li key={parcel.number ?? parcel.url ?? index}>
+                        {parcel.url ? (
+                          <a href={parcel.url} target="_blank" rel="noopener noreferrer">
+                            {order.tracking.length > 1 ? `Track parcel ${index + 1}` : 'Track your parcel'}
+                          </a>
+                        ) : (
+                          <span className="prx-row__meta">Tracking number {parcel.number}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>

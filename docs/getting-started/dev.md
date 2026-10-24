@@ -25,7 +25,7 @@ present and is absent in production.
 
 | Path | What lives there |
 |---|---|
-| `app/layout.js` | Universal shell. Injects the admin's theme as CSS custom properties. No script tag, no third-party host. |
+| `app/layout.js` | Universal shell. Puts the admin's theme tokens on `:root` (see `architecture/dev.md` → Theme and logo). No script tag, no third-party host. |
 | `app/(portal)/` | The authenticated tree. Its layout is the single session gate. |
 | `app/login/` | Anonymous. Bounces to `/` only a session the admin still accepts (`/patient/auth/me`), never on the cookie's signature alone. |
 | `app/claim/[token]/` | Anonymous. Lands a claim link; signs in in place. |
@@ -35,7 +35,7 @@ present and is absent in production.
 | `app/api/session/` | Sign in and out. Exchanges a credential for an admin token server-side. |
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
-| `lib/` | Server-only modules. `adminApi`, `session`, `portalProxy`, `theme`, `destinations`. |
+| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `destinations` (server-only), and `format` (money and word helpers for display). |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |
 

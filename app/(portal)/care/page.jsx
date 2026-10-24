@@ -1,4 +1,5 @@
 import Screen from '@/components/ui/Screen';
+import { humanize } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,7 @@ export default function CarePage() {
                 </div>
               ))}
               <p className="prx-row__meta">
-                {rx.status}
+                {humanize(rx.status)}
                 {rx.refills != null ? ` · ${rx.refills} refills left` : ''}
                 {rx.prescriber ? ` · ${rx.prescriber}` : ''}
               </p>
