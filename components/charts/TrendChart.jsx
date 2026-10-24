@@ -20,6 +20,9 @@ import LocalTime from '@/components/ui/LocalTime';
  *   plain-English sentence under the chart is what most people actually read.
  * - Colour never carries meaning alone: the goal line is labelled, the value is
  *   written out.
+ * - A lab value carries its normal range as a shaded, labelled band, and each
+ *   reading is marked by how it reads against it: outside the range a larger
+ *   dot, critical a ringed one. The words are in the list beside the chart.
  *
  * ── Time ─────────────────────────────────────────────────────────────────────
  *
@@ -32,10 +35,13 @@ import LocalTime from '@/components/ui/LocalTime';
  *
  * @param {object} props
  * @param {string} props.title
- * @param {Array<{label: string, tone?: 'brand'|'muted', points: Array<{at: string, value: number}>}>} props.lines
+ * @param {Array<{label: string, tone?: 'brand'|'muted', marks?: boolean, points: Array<{at: string, value: number, severity?: string}>}>} props.lines
+ *   `marks` draws every reading, styled by its `severity` (critical, abnormal, normal, unknown)
  * @param {{value: number, label: string}|null} [props.target]
+ * @param {{low: number|null, high: number|null, label: string}|null} [props.band]  a normal range; either end may be open
  * @param {string} props.summary  one sentence, already composed by the caller
  * @param {string} props.headline the latest value as it should read, e.g. "196.4 lbs"
+ * @param {boolean} [props.bare]  no visible title or headline, for a chart inside a row that already shows both (still named for screen readers)
  */
 
 const WIDTH = 320;
@@ -46,7 +52,7 @@ function round(value) {
   return Math.round(value * 10) / 10;
 }
 
-export default function TrendChart({ title, lines, target = null, summary, headline }) {
+export default function TrendChart({ title, lines, target = null, band = null, summary, headline, bare = false }) {
   const points = lines.flatMap((line) => line.points);
   const times = points.map((point) => Date.parse(point.at)).filter((time) => !Number.isNaN(time));
 
@@ -54,7 +60,8 @@ export default function TrendChart({ title, lines, target = null, summary, headl
   // this is defence in depth — without it `new Date(Infinity)` throws below.
   if (times.length === 0) return null;
 
-  const values = [...points.map((point) => point.value), ...(target ? [target.value] : [])];
+  const bandEdges = band ? [band.low, band.high].filter((edge) => typeof edge === 'number') : [];
+  const values = [...points.map((point) => point.value), ...(target ? [target.value] : []), ...bandEdges];
 
   let low = Math.min(...values);
   let high = Math.max(...values);
@@ -86,10 +93,12 @@ export default function TrendChart({ title, lines, target = null, summary, headl
 
   return (
     <figure className="prx-chart">
-      <div className="prx-chart__head">
-        <h2 className="prx-chart__title">{title}</h2>
-        <p className="prx-chart__value">{headline}</p>
-      </div>
+      {bare ? null : (
+        <div className="prx-chart__head">
+          <h2 className="prx-chart__title">{title}</h2>
+          <p className="prx-chart__value">{headline}</p>
+        </div>
+      )}
 
       <svg
         className="prx-chart__plot"
@@ -112,6 +121,20 @@ export default function TrendChart({ title, lines, target = null, summary, headl
         </text>
         <line className="prx-chart__baseline" x1={PAD.left} x2={WIDTH - PAD.right} y1={HEIGHT - PAD.bottom} y2={HEIGHT - PAD.bottom} />
 
+        {band && bandEdges.length > 0 ? (
+          <g className="prx-chart__band">
+            <rect
+              x={PAD.left}
+              width={WIDTH - PAD.left - PAD.right}
+              y={typeof band.high === 'number' ? y(band.high) : PAD.top}
+              height={(typeof band.low === 'number' ? y(band.low) : HEIGHT - PAD.bottom) - (typeof band.high === 'number' ? y(band.high) : PAD.top)}
+            />
+            <text x={PAD.left + 4} y={(typeof band.high === 'number' ? y(band.high) : PAD.top) + 10}>
+              {band.label}
+            </text>
+          </g>
+        ) : null}
+
         {target ? (
           <g className="prx-chart__target">
             <line x1={PAD.left} x2={WIDTH - PAD.right} y1={y(target.value)} y2={y(target.value)} />
@@ -132,7 +155,23 @@ export default function TrendChart({ title, lines, target = null, summary, headl
               {line.points.length > 1 ? (
                 <polyline points={line.points.map((point) => `${x(point.at)},${y(point.value)}`).join(' ')} />
               ) : null}
-              <circle className="prx-chart__ring" cx={x(latest.at)} cy={y(latest.value)} r="5" />
+              {line.marks
+                ? line.points.slice(0, -1).map((point, index) => (
+                    <circle
+                      key={`${point.at}-${index}`}
+                      className={`prx-chart__mark prx-chart__mark--${point.severity ?? 'unknown'}`}
+                      cx={x(point.at)}
+                      cy={y(point.value)}
+                      r={point.severity === 'critical' || point.severity === 'abnormal' ? 3.5 : 2.5}
+                    />
+                  ))
+                : null}
+              <circle
+                className={`prx-chart__ring${line.marks ? ` prx-chart__mark--${latest.severity ?? 'unknown'}` : ''}`}
+                cx={x(latest.at)}
+                cy={y(latest.value)}
+                r="5"
+              />
               <circle className="prx-chart__dot" cx={x(latest.at)} cy={y(latest.value)} r="2.5" />
             </g>
           );
