@@ -819,6 +819,132 @@ h2[tabindex='-1']:focus { outline: none; }
   &__summary { margin: .5rem 0 0; color: var(--prx-ink); }
 }
 
+// ── Lab results ───────────────────────────────────────────────────────────
+//
+// Severity is said three ways (word, glyph, colour), never by colour alone.
+// Critical is the one state that is bold, outlined and filled: it has to read
+// as different from "high" at a glance on a phone in sunlight.
+
+.prx-chart__band {
+  rect { fill: var(--prx-ok); fill-opacity: .1; }
+  text { font-size: 9px; fill: var(--prx-ok); font-weight: 600; }
+}
+
+.prx-chart__mark { fill: var(--prx-brand); }
+.prx-chart__mark--abnormal { fill: var(--prx-warn); }
+.prx-chart__mark--critical { fill: var(--prx-urgent); }
+.prx-chart__line .prx-chart__ring.prx-chart__mark--abnormal { fill: var(--prx-surface); stroke: var(--prx-warn); }
+.prx-chart__line .prx-chart__ring.prx-chart__mark--critical { fill: var(--prx-surface); stroke: var(--prx-urgent); stroke-width: 3; }
+
+.prx-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .1rem .5rem;
+  border-radius: 999px;
+  font-size: .8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+
+  &__glyph { font-size: .75rem; line-height: 1; }
+
+  &--normal { color: var(--prx-ok); background: color-mix(in srgb, var(--prx-ok) 10%, transparent); }
+  &--abnormal { color: var(--prx-warn); background: var(--prx-warn-wash); }
+  &--critical { color: var(--prx-surface); background: var(--prx-urgent); border-color: var(--prx-urgent); }
+  &--unknown { color: var(--prx-ink-2); background: var(--prx-bg); }
+}
+
+.prx-notice--critical {
+  border: 2px solid var(--prx-urgent);
+  background: color-mix(in srgb, var(--prx-urgent) 6%, var(--prx-surface));
+}
+
+.prx-tiles {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+
+  @media (min-width: 40rem) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.prx-tile {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  height: 100%;
+  padding: .875rem;
+  border: 1px solid var(--prx-line);
+  border-radius: .75rem;
+  background: var(--prx-surface);
+  color: var(--prx-ink);
+  text-decoration: none;
+
+  &__label { font-size: .875rem; color: var(--prx-ink-2); font-weight: 600; }
+  &__value { font-size: 1.25rem; font-weight: 700; overflow-wrap: anywhere; }
+  &__date { font-size: .8125rem; }
+  .prx-flag { align-self: flex-start; }
+
+  &--critical { border: 2px solid var(--prx-urgent); }
+  &--abnormal { border-color: var(--prx-warn); }
+}
+
+.prx-lab {
+  border: 1px solid var(--prx-line);
+  border-radius: .75rem;
+  background: var(--prx-surface);
+  margin: 0 0 .5rem;
+
+  &--critical { border: 2px solid var(--prx-urgent); }
+
+  &__summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .25rem .75rem;
+    min-height: 44px;
+    padding: .75rem 1rem;
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker { display: none; }
+  }
+
+  &__name { font-weight: 600; overflow-wrap: anywhere; }
+  &__value { justify-self: end; font-weight: 700; }
+  .prx-flag { grid-column: 1 / -1; justify-self: start; }
+
+  &__body {
+    padding: 0 1rem 1rem;
+
+    .prx-chart { border: 0; padding: 0; margin: 0 0 .5rem; }
+  }
+
+  &__reading { display: inline-flex; align-items: center; gap: .5rem; text-align: right; flex-wrap: wrap; justify-content: flex-end; }
+  &__about { color: var(--prx-ink-2); font-size: .9375rem; }
+
+  &__note {
+    margin: 0 0 .75rem;
+    padding: .5rem .75rem;
+    border-left: 3px solid var(--prx-brand);
+    background: var(--prx-bg);
+
+    p { margin: 0 0 .25rem; }
+  }
+}
+
+.prx-card > .prx-section-title:first-child { margin-top: 0; }
+
+.prx-lab-result {
+  border-bottom: 1px solid var(--prx-line);
+
+  &:last-child { border-bottom: 0; }
+  .prx-row { border-bottom: 0; align-items: flex-start; }
+}
+
 // ── Signed-out pages ──────────────────────────────────────────────────────
 
 // The header logo width the admin set (Settings > Theme > Logo size), phone

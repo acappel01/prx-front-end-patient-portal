@@ -1,7 +1,7 @@
 import '@/public/scss/main.scss';
 
 import { deploymentConfig } from '@/lib/adminApi';
-import { themeStyle } from '@/lib/theme';
+import { brandName, themeStyle } from '@/lib/theme';
 
 /**
  * Universal shell.
@@ -42,7 +42,7 @@ export default async function RootLayout({ children }) {
       <head>
         <style>{`:root{${themeStyle(config)}}`}</style>
         {/* `brand.name`, not `site.name` — there is no `site` key on the payload. */}
-        <title>{config?.brand?.name ?? 'Patient portal'}</title>
+        <title>{brandName(config)}</title>
       </head>
       <body>{children}</body>
     </html>

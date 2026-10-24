@@ -1,5 +1,5 @@
 import { deploymentConfig } from '@/lib/adminApi';
-import { brandLogo } from '@/lib/theme';
+import { brandLogo, brandName } from '@/lib/theme';
 
 /**
  * The frame for the signed-out account pages: sign in, register, forgot, and the
@@ -10,7 +10,7 @@ import { brandLogo } from '@/lib/theme';
 export default async function AccountShell({ children }) {
   const config = await deploymentConfig();
   const logo = brandLogo(config);
-  const name = config?.brand?.name ?? 'Patient portal';
+  const name = brandName(config);
 
   return (
     <div className="prx-app">
@@ -19,7 +19,7 @@ export default async function AccountShell({ children }) {
         {logo ? (
           <h1 className="prx-account__brand">
             {/* eslint-disable-next-line @next/next/no-img-element -- admin-hosted, any format, no optimiser (next.config.mjs) */}
-            <img src={logo.url} alt={logo.alt || name} className="prx-account__logo" />
+            <img src={logo.url} alt={logo.alt} className="prx-account__logo" />
           </h1>
         ) : (
           <h1>{name}</h1>

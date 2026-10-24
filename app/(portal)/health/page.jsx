@@ -1,6 +1,9 @@
+import { redirect } from 'next/navigation';
+
 import TrendChart from '@/components/charts/TrendChart';
 import LocalTime from '@/components/ui/LocalTime';
 import Screen from '@/components/ui/Screen';
+import { deploymentConfig } from '@/lib/adminApi';
 
 export const dynamic = 'force-dynamic';
 
@@ -168,48 +171,66 @@ export default async function HealthPage({ searchParams }) {
   const requested = (await searchParams)?.period;
   const period = PERIODS.some((p) => p.key === requested) ? requested : '1year';
 
+  // The tab shows while tracking OR lab results is on. With tracking off,
+  // Lab results is the whole tab.
+  const modules = (await deploymentConfig())?.portal?.modules ?? {};
+  if (modules.vitals === false) redirect('/health/labs');
+
   return (
-    <Screen
-      title="Your progress"
-      path={`/patient/health/series?period=${period}`}
-      empty="Add your first reading and your progress starts building from today."
-      emptyAction={{ href: '/health/log', label: 'Log a reading' }}
-      action={{ href: '/health/log', label: 'Log a reading' }}
-    >
-      {(rows, data) => (
+    <>
+      <Screen
+        title="Your progress"
+        path={`/patient/health/series?period=${period}`}
+        empty="Add your first reading and your progress starts building from today."
+        emptyAction={{ href: '/health/log', label: 'Log a reading' }}
+        action={{ href: '/health/log', label: 'Log a reading' }}
+      >
+        {(rows, data) => (
+          <>
+            <nav className="prx-periods" aria-label="Period">
+              {PERIODS.map((p) => (
+                <a key={p.key} href={`/health?period=${p.key}`} aria-current={p.key === period ? 'page' : undefined}>
+                  {p.label}
+                </a>
+              ))}
+            </nav>
+
+            <Charts data={data} />
+
+            <h2 className="prx-section-title">Recent readings</h2>
+            <ul className="prx-rows">
+              {rows.map((vital) => {
+                const parts = measurements(vital);
+
+                return (
+                  <li className="prx-row" key={vital.id}>
+                    <span>
+                      {/* A row with no recognised number still renders, and says
+                          so. Dropping it would hide a reading the patient knows
+                          they took — on the one screen they came to check. */}
+                      {parts.length > 0 ? parts.join(' · ') : 'Reading recorded'}
+                    </span>
+                    <span className="prx-row__meta">
+                      <LocalTime value={vital.created_at} />
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </Screen>
+
+      {modules.labs !== false ? (
         <>
-          <nav className="prx-periods" aria-label="Period">
-            {PERIODS.map((p) => (
-              <a key={p.key} href={`/health?period=${p.key}`} aria-current={p.key === period ? 'page' : undefined}>
-                {p.label}
-              </a>
-            ))}
-          </nav>
-
-          <Charts data={data} />
-
-          <h2 className="prx-section-title">Recent readings</h2>
-          <ul className="prx-rows">
-            {rows.map((vital) => {
-              const parts = measurements(vital);
-
-              return (
-                <li className="prx-row" key={vital.id}>
-                  <span>
-                    {/* A row with no recognised number still renders, and says
-                        so. Dropping it would hide a reading the patient knows
-                        they took — on the one screen they came to check. */}
-                    {parts.length > 0 ? parts.join(' · ') : 'Reading recorded'}
-                  </span>
-                  <span className="prx-row__meta">
-                    <LocalTime value={vital.created_at} />
-                  </span>
-                </li>
-              );
-            })}
+          <h2 className="prx-section-title">Lab results</h2>
+          <ul className="prx-rows prx-record-links">
+            <li className="prx-row">
+              <a href="/health/labs">Your lab results, each value charted over time</a>
+            </li>
           </ul>
         </>
-      )}
-    </Screen>
+      ) : null}
+    </>
   );
 }
