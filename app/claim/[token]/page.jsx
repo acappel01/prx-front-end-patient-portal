@@ -3,6 +3,7 @@ import ClaimSignIn from '@/components/account/ClaimSignIn';
 import LoginForm from '@/components/ui/LoginForm';
 import { adminFetch, deploymentConfig } from '@/lib/adminApi';
 import { sessionToken } from '@/lib/session';
+import { brandName } from '@/lib/theme';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,7 @@ const TOKEN = /^[A-Za-z0-9_-]{43}$/;
 export default async function ClaimPage({ params }) {
   const { token } = await params;
   const config = await deploymentConfig();
-  const brand = config?.brand?.name ?? 'Patient portal';
+  const brand = brandName(config);
 
   if (!TOKEN.test(token ?? '')) {
     return (
