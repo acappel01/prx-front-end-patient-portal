@@ -71,3 +71,8 @@ is never served to another request.
 Each functional area (approvals, messaging, vitals, subscriptions) is independently toggleable
 from the admin and must degrade cleanly when disabled — a disabled module renders nothing, never
 a broken control.
+
+The admin enforces the toggles too: a call to a switched-off module answers 403 with
+`code: "module_off"`, which `Screen` renders as a plain "not available" message. Modules today:
+Talk, Health, and Medications, allergies and conditions (`health_record`). Approvals have no
+toggle, because an added item that nobody can approve would never ship.

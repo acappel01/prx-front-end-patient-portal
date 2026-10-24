@@ -176,6 +176,10 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
     cursor: pointer;
   }
 
+  // Outside a task card a CTA has no tier to colour it. The primary modifier
+  // marks the one button on a screen that commits something.
+  &__cta--primary { background: var(--prx-brand); color: var(--prx-brand-ink); border-color: var(--prx-brand); }
+
   &__chip {
     display: inline-block;
     padding: .1rem .5rem;
@@ -826,4 +830,126 @@ h2[tabindex='-1']:focus { outline: none; }
   width: var(--logo-header-w, 140px);
   max-width: 100%;
   height: auto;
+}
+
+// ── Record upkeep and approvals ───────────────────────────────────────────
+
+// A provider-added item: what it costs, then the decision. The confirm step
+// repeats the amount and the card in words, because the second tap charges.
+.prx-approval {
+  h2 { margin-bottom: .5rem; }
+
+  &__price {
+    margin: 0 0 .5rem;
+
+    .prx-row { min-height: 0; padding: .35rem 0; }
+    dd { margin: 0; }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem 1.25rem;
+    margin-top: .75rem;
+  }
+
+  &__confirm {
+    margin-top: .75rem;
+    padding: .75rem;
+    border-radius: .5rem;
+    background: color-mix(in srgb, var(--prx-brand) 8%, transparent);
+  }
+
+  &__result { color: var(--prx-ok); font-weight: 600; }
+
+  &__notice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem 1rem;
+    border-color: var(--prx-brand);
+  }
+}
+
+// Medications, allergies and conditions: a list each, with an inline add form
+// and name suggestions from the provider's list.
+.prx-health-list {
+  h2 { margin-bottom: .25rem; }
+
+  .prx-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+  &__confirm { display: flex; gap: .75rem; flex-shrink: 0; }
+  &__add { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--prx-line); }
+
+  &__matches {
+    list-style: none;
+    margin: .25rem 0 0;
+    padding: 0;
+    border: 1px solid var(--prx-line);
+    border-radius: .5rem;
+    overflow: hidden;
+
+    button {
+      display: block;
+      width: 100%;
+      min-height: 44px;
+      padding: .5rem .75rem;
+      border: 0;
+      border-bottom: 1px solid var(--prx-line);
+      background: var(--prx-surface);
+      color: var(--prx-ink);
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+
+      &:hover, &:focus-visible { background: color-mix(in srgb, var(--prx-brand) 8%, var(--prx-surface)); }
+    }
+
+    li:last-child button { border-bottom: 0; }
+  }
+}
+
+// Message preferences: one switch per row, full-row tap target.
+.prx-toggle {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  min-height: 44px;
+  cursor: pointer;
+
+  input { width: 1.25rem; height: 1.25rem; accent-color: var(--prx-brand); }
+}
+
+.prx-toggle-group {
+  margin: .5rem 0 0;
+  padding: 0 0 0 2rem;
+  border: 0;
+
+  &:disabled { opacity: .55; }
+  legend { padding: 0; }
+}
+
+// Record's Maintain and Operate links.
+.prx-record-links {
+  margin-top: 1.5rem;
+
+  h2 { margin-bottom: .25rem; }
+
+  // The link fills the row, so the whole row is the tap target and the
+  // chevron sits at the far edge.
+  .prx-row { padding: 0; }
+
+  a {
+    display: flex;
+    flex: 1;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    min-height: 44px;
+    padding: .75rem 0;
+    color: var(--prx-ink);
+    text-decoration: none;
+
+    &:hover, &:focus-visible { color: var(--prx-brand); }
+  }
 }

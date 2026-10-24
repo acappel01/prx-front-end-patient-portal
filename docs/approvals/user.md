@@ -9,6 +9,9 @@ item, its price, and the card that would be charged. They accept or decline.
 - **Declining** removes it. It will not be dispensed or shipped.
 - The **original purchase is charged regardless** — the patient already agreed to it at checkout.
   Only the addition requires a decision.
+- **Doing nothing counts as declining.** The patient has 48 hours. After that the original order
+  ships without the added item, and the item is not charged. The portal's Home screen shows the
+  task with a countdown until then.
 
 ## Two charges on one order can be correct
 

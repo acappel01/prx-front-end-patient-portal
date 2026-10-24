@@ -10,7 +10,7 @@ import { adminFetch } from '@/lib/adminApi';
  * rather than copy-pasted into five screens where one of them will eventually
  * be missed and throw a 500 onto a clinical page.
  */
-export default async function Screen({ title, path, empty, emptyAction, action, children }) {
+export default async function Screen({ title, path, empty, emptyAction, action, rowsOf, children }) {
   const { ok, status, data, code, requestId } = await adminFetch(path);
 
   // The install requires two-step verification and this account lacks it.
@@ -46,6 +46,18 @@ export default async function Screen({ title, path, empty, emptyAction, action, 
     );
   }
 
+  // The install switched this area off: the care team keeps it instead.
+  if (status === 403 && code === 'module_off') {
+    return (
+      <>
+        <h1>{title}</h1>
+        <p className="prx-muted">
+          Your care team keeps this up to date. <a href="/talk">Message them</a> if something has changed.
+        </p>
+      </>
+    );
+  }
+
   if (!ok) {
     return (
       <>
@@ -56,7 +68,9 @@ export default async function Screen({ title, path, empty, emptyAction, action, 
     );
   }
 
-  const rows = Array.isArray(data) ? data : (data?.items ?? []);
+  // `rowsOf` picks the list out of a screen-shaped payload; the default reads a
+  // bare list or `items`.
+  const rows = rowsOf ? (rowsOf(data) ?? []) : Array.isArray(data) ? data : (data?.items ?? []);
 
   return (
     <>

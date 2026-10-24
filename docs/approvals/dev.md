@@ -65,16 +65,54 @@ from one that was never given.
 A declined item must be excluded from fulfillment. The eligibility model is a **whitelist**: an
 item ships only if affirmatively approved, so a failure defaults to not shipping.
 
+## How this portal implements it
+
+| Piece | File |
+|---|---|
+| Home task "Approve your prescription before it ships" | ranked by the admin (`GET /patient/home`), rendered by `components/stack/TaskCard.jsx` |
+| Care notice linking to the decision page | `components/care/ApprovalsNotice.jsx` |
+| Decision page `/care/approvals` | `app/(portal)/care/approvals/page.jsx`, `components/care/ApprovalList.jsx` |
+| Browser calls | `lib/portalClient.js` through the `/api/portal` proxy (`lib/portalProxy.js` allowlists `POST approvals/{uuid}/accept` and `…/decline`) |
+
+The page reads `GET /patient/approvals`, which returns the pending items and the card a charge
+would use (brand and last four only). Approving takes two taps: **Approve $x** opens a
+confirmation that names the amount and the card, and **Yes, charge $x** sends the accept.
+
+- Each attempt gets a fresh `crypto.randomUUID()` as its idempotency key. The admin forwards it
+  to the provider as the `Idempotency-Key` header.
+- The admin compares the displayed total with the provider's amount due before it calls the
+  provider, so a stale page gets `price_mismatch` and nothing is charged.
+- The admin stores every decision as evidence (item snapshot, amounts, card shown, key, IP,
+  user agent, time) in `patient_approval_decisions`, with the outcome the provider returned.
+
+Outcomes, as the admin returns them in `code`:
+
+| Outcome | HTTP | The page shows | Retry control |
+|---|---|---|---|
+| `charged` / `declined` | 200 | the confirmation | no |
+| `payment_required` / `gateway_declined` | 402 | "The card was not accepted", message the care team | no |
+| `already_resolved` / `price_mismatch` | 409 | reload the page | no |
+| `uncertain` | 202 | "We are checking with the pharmacy" | **no** |
+| `error` | 502 | "Something went wrong" | yes, with a new key |
+
+A network failure in the browser (status 0) is treated as `uncertain`, because the request may
+have reached the provider.
+
+If the patient does nothing, the provider's review window (48 hours) closes and the provider
+captures the original purchase only. The added item is never charged and does not ship. The Home
+task carries the deadline as a countdown.
+
 ## Dependencies not yet available
 
 | Needed | State |
 |---|---|
-| list / accept / decline / payment-methods | ✅ available |
+| list / accept / decline / payment-methods | ✅ available, used by this portal |
 | accepted and declined webhooks | ✅ available |
 | order-event correlation identifiers | ✅ available |
 | recording an externally-executed refund or void | ❌ **missing** |
 | re-pointing an authorization reference after re-authorization | ❌ **missing** |
 
-**Build the shell, auth and read-only views now. Hold money-touching screens** until the two
-missing endpoints land — otherwise this app is written against contracts that will each move
-again.
+For a card the provider vaulted, accept and decline are complete today: the provider charges, and
+nothing here touches money. The two missing endpoints matter only when a brand charges on its own
+gateway and the provider has to be told about a refund, void or new authorization made outside
+it. Do not build that path until they land.
