@@ -35,7 +35,9 @@ export async function POST(request) {
   let result;
   try {
     result = await adminFetch(route, { method: 'POST', token: '', body: { email } });
-  } catch {
+  } catch (error) {
+    // The route and reason only: never the address.
+    console.error(`[account/link] admin unreachable on ${route}: ${error?.message ?? error}`);
     return NextResponse.json({ message: 'We could not reach the service. Please try again in a moment.' }, { status: 503 });
   }
 
@@ -62,6 +64,10 @@ export async function POST(request) {
   if (result.status === 503 && result.message) {
     return NextResponse.json({ message: result.message }, { status: 503 });
   }
+
+  // Logged so the operator can see what the admin answered (the page shows
+  // only the fixed sentence). Status and request id, never the address.
+  console.error(`[account/link] admin answered HTTP ${result.status} on ${route}${result.requestId ? ` (request ${result.requestId})` : ''}`);
 
   return NextResponse.json({ message: 'We could not send the email right now. Please try again later.' }, { status: 503 });
 }

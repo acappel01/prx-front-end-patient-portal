@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import Icon from '@/components/ui/Icon';
+
 /**
  * The five destinations. Client-side only because it needs the active path —
  * nothing else here is interactive, and no data passes through it.
@@ -34,8 +36,8 @@ export default function TabBar({ destinations }) {
             className={`prx-tab${destination.raised ? ' prx-tab--raised' : ''}`}
             aria-current={active ? 'page' : undefined}
           >
-            <span className="prx-tab__glyph" aria-hidden="true">
-              {destination.glyph}
+            <span className="prx-tab__glyph">
+              <Icon name={destination.icon} />
             </span>
             <span>{destination.label}</span>
           </Link>

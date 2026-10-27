@@ -17,6 +17,14 @@ npm ci
 npm run dev
 ```
 
+`ADMIN_API_BASE_URL` is the **admin's** origin plus `/api/v1` (for example
+`https://admin.example.com/api/v1`), never the storefront's. The storefront's proxy passes
+only public calls, so pointed there the portal still shows the brand but every account call
+(sign in, reset, create account) fails with a generic message. When the admin answers an
+account call with anything unexpected, the portal logs `[account] admin answered HTTP <status>
+on <route>` (no address, token or password); check the service log (`journalctl -u <service>`)
+for it first.
+
 `SESSION_SECRET` has no default and the app refuses to issue a session without one. That is
 deliberate — an unset secret silently degrading to an unsigned cookie is a control that looks
 present and is absent in production.
@@ -32,10 +40,11 @@ present and is absent in production.
 | `app/register/`, `app/forgot/` | Anonymous. Email-only forms that ask the admin to email a link. No account is created here. |
 | `app/create-account/[token]/`, `app/reset/[token]/` | Anonymous. Land the emailed links; a password form, token spent only on submit. |
 | `app/api/account/{link,create,reset}/` | The three anonymous account calls. Outside the proxy, which needs a session. |
+| `app/fonts/` | The admin's brand fonts, relayed so no patient page loads from Google (`lib/fonts.js`). |
 | `app/api/session/` | Sign in and out. Exchanges a credential for an admin token server-side. |
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
-| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `destinations` (server-only), and `format` (money and word helpers for display). |
+| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations` (server-only), and `format` (money and word helpers for display). |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |
 

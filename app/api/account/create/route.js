@@ -42,5 +42,5 @@ export async function POST(request) {
     return NextResponse.json({ data: { ok: true } }, { status: 201 });
   }
 
-  return accountError(result);
+  return accountError(result, '/patient/auth/create-account');
 }

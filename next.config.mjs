@@ -6,9 +6,10 @@ const nextConfig = {
   images: { unoptimized: true },
 
   // Applied to EVERY route, including the API routes and any error page. The
-  // portal has no cacheable surface at all: the few anonymous pages (sign in,
-  // register, forgot, and the emailed-link pages) are per-visitor forms, and a
-  // patient's view must never be served to another request.
+  // portal has no cacheable surface apart from the relayed brand fonts (below):
+  // the few anonymous pages (sign in, register, forgot, and the emailed-link
+  // pages) are per-visitor forms, and a patient's view must never be served to
+  // another request.
   async headers() {
     return [
       {
@@ -40,6 +41,18 @@ const nextConfig = {
       {
         source: '/reset/:path*',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        // The brand fonts relayed from Google (lib/fonts.js): the same bytes
+        // for every visitor, nothing about a patient. Google's file paths are
+        // versioned, so a file never changes; the stylesheet URL carries the
+        // theme version, so a font change reaches browsers at once.
+        source: '/fonts/file/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
+        source: '/fonts/stylesheet',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
       },
     ];
   },

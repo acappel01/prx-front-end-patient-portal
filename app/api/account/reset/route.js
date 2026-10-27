@@ -43,5 +43,5 @@ export async function POST(request) {
     return NextResponse.json({ data: { changed: true }, message: result.message });
   }
 
-  return accountError(result);
+  return accountError(result, '/patient/auth/password/reset');
 }
