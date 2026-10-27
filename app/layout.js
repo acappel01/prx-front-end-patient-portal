@@ -1,7 +1,8 @@
 import '@/public/scss/main.scss';
 
 import { deploymentConfig } from '@/lib/adminApi';
-import { brandName, themeStyle } from '@/lib/theme';
+import { fontStylesheetHref } from '@/lib/fonts';
+import { brandFavicon, brandName, customCss, themeStyle } from '@/lib/theme';
 
 /**
  * Universal shell.
@@ -10,8 +11,8 @@ import { brandName, themeStyle } from '@/lib/theme';
  * storefront injects operator-pasted tracking snippets unsanitized — a real
  * feature there. Sharing a root layout would run third-party script on a page
  * rendering prescriptions. There is no script tag in this file and no
- * third-party host anywhere in this application; fonts are system stacks or
- * self-hosted, never fetched from a font CDN on an authenticated page.
+ * third-party host anywhere in this application: the admin's brand fonts are
+ * relayed through this origin (lib/fonts.js), never linked from a font CDN.
  */
 
 export const dynamic = 'force-dynamic';
@@ -36,11 +37,17 @@ export default async function RootLayout({ children }) {
   // Non-PHI and identical for every visitor, so this is the one thing the app
   // caches. Everything patient-specific is fetched per request.
   const config = await deploymentConfig();
+  const fonts = fontStylesheetHref(config);
+  const favicon = brandFavicon(config);
+  const custom = customCss(config);
 
   return (
-    <html lang="en" style={{ cssText: undefined }} data-template={config?.theme?.frontend_template ?? 'default'}>
+    <html lang="en" style={{ cssText: undefined }} data-app="portal" data-template={config?.theme?.frontend_template ?? 'default'}>
       <head>
+        {fonts ? <link rel="stylesheet" href={fonts} /> : null}
+        {favicon ? <link rel="icon" href={favicon} /> : null}
         <style>{`:root{${themeStyle(config)}}`}</style>
+        {custom ? <style>{custom}</style> : null}
         {/* `brand.name`, not `site.name` — there is no `site` key on the payload. */}
         <title>{brandName(config)}</title>
       </head>

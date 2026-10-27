@@ -83,7 +83,11 @@ control that is guaranteed to fail.
 - `Referrer-Policy: no-referrer` on `/claim/*`, `/create-account/*` and `/reset/*`, whose URLs
   carry a credential rather than an identifier. `same-origin` would repeat it as the Referer on
   that page's own requests.
-- No third-party script, font, or asset host on an authenticated page.
+- No third-party script, font, or asset host on an authenticated page. The admin's Google Fonts
+  stylesheet is relayed through this origin (`/fonts/stylesheet`, `/fonts/file/*`, `lib/fonts.js`):
+  only `fonts.googleapis.com/css2?…` and font files under `fonts.gstatic.com` are fetched, and a
+  stylesheet that would still load anything from elsewhere is dropped whole. Theme > Custom CSS is
+  applied only when it loads nothing (`url(`, `image-set(`, `@import`) and holds no `<` or `\`.
 - **A signed cookie proves we minted it, not that the admin still honours it.** A claim revokes
   other sessions, so a validly signed cookie can hold a dead token. `/login` asks `/patient/auth/me`
   before bouncing to `/` — trusting the signature there was an inescapable

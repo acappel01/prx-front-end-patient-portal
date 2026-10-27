@@ -54,12 +54,36 @@ the portal's own `--prx-*` names, each with a neutral default for an admin that 
 | `--prx-urgent`, `--prx-warn`, `--prx-ok` | the Danger, Warning and Success roles |
 | `--prx-bg`, `--prx-ink`, `--prx-ink-2`, `--prx-line` | background, text, Text muted and Border |
 | `--prx-font-body`, `--prx-font-display` | `--font-body`, `--font-display` |
+| `--prx-action` / `--prx-action-ink` | the Action role (`--color-action`), else the primary colour; the one button on a screen that commits something, and the raised Talk tab |
+| `--prx-radius-sm`, `--prx-radius-md`, `--prx-radius-pill` | `--radius-*` from Corner style |
 
-The admin's font stylesheet is never linked (no third-party host on an authenticated page), so a
-family applies only where the device has it or the deployment self-hosts it.
+Card backgrounds stay white (`--prx-surface`): the admin's Surface role is the website's tinted band
+colour, not a card colour.
 
-The signed-out pages show the brand logo (`brand.logo_light_url`, else `brand.logo_url`, from the
-admin's own host) at the header logo width, and fall back to the brand name.
+**Fonts.** The admin's font stylesheet (`theme.tokens.font_stylesheet`, a Google Fonts URL) is relayed
+through this origin, never linked: `/fonts/stylesheet` fetches it server-side and rewrites each font
+URL to `/fonts/file/…`, which relays the file (`lib/fonts.js`). The browser never contacts Google.
+Both are cached (`public`; files a year, the stylesheet a day, versioned by `tokens.version`). A
+relative stylesheet path is the website's own file and is ignored here.
+
+**Custom CSS.** Settings > Theme > Custom CSS is applied after the tokens, so a rule such as
+`:root { --font-display-stretch: 118%; }` reaches the portal. `<html data-app="portal">` lets a rule
+target only the portal (`[data-app="portal"] …`). CSS that loads anything is not applied (see
+`security/dev.md`), and the portal logs why.
+
+**Logo.** The signed-out pages show the brand logo (`brand.logo_light_url`, else `brand.logo_url`, from
+the admin's own host) at the header logo width, and fall back to the brand name. Signed-in screens show
+the same logo in the brand bar across the top (`components/shell/BrandBar.jsx`), linking home.
+`brand.favicon_url` is the tab icon.
+
+**Icons** are inline SVG (`components/ui/Icon.jsx`, Tabler outline paths, MIT), never text symbols or
+an icon font: a symbol character draws as an empty box on a device whose fonts lack it.
+
+**When the brand does not show.** The portal renders unbranded whenever `GET /config` fails, and logs
+`[config] admin answered HTTP <status> on /config…`. The usual causes: `ADMIN_API_BASE_URL` points at
+the storefront instead of the admin, or `ADMIN_API_TOKEN` lacks Public read while Require tokens is on.
+`/config` is cached 5 minutes, so after fixing either, wait that out or clear `.next/cache/fetch-cache`
+and restart.
 
 ## Caching
 

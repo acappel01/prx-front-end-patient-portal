@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import BrandBar from '@/components/shell/BrandBar';
 import SessionTimeout from '@/components/shell/SessionTimeout';
 import TabBar from '@/components/shell/TabBar';
 import { deploymentConfig } from '@/lib/adminApi';
@@ -23,7 +24,10 @@ export default async function PortalLayout({ children }) {
 
   return (
     <div className="prx-app">
-      <main className="prx-main">{children}</main>
+      <div className="prx-frame">
+        <BrandBar config={config} />
+        <main className="prx-main">{children}</main>
+      </div>
       <TabBar destinations={destinationsFor(config)} />
       <SessionTimeout idleMinutes={config?.portal?.session?.idle_minutes} />
     </div>
