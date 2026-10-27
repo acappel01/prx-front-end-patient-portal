@@ -17,6 +17,14 @@ npm ci
 npm run dev
 ```
 
+`ADMIN_API_BASE_URL` is the **admin's** origin plus `/api/v1` (for example
+`https://admin.example.com/api/v1`), never the storefront's. The storefront's proxy passes
+only public calls, so pointed there the portal still shows the brand but every account call
+(sign in, reset, create account) fails with a generic message. When the admin answers an
+account call with anything unexpected, the portal logs `[account] admin answered HTTP <status>
+on <route>` (no address, token or password); check the service log (`journalctl -u <service>`)
+for it first.
+
 `SESSION_SECRET` has no default and the app refuses to issue a session without one. That is
 deliberate — an unset secret silently degrading to an unsigned cookie is a control that looks
 present and is absent in production.
