@@ -1040,6 +1040,41 @@ h2[tabindex='-1']:focus { outline: none; }
   }
 }
 
+// A membership: price, next payment or end date, the card, and Cancel or Undo.
+// Cancel asks once more in words (what stops, when it ends, a founding rate is
+// not given back) before anything is sent.
+.prx-membership {
+  h2 { margin-bottom: .15rem; }
+
+  .prx-row { min-height: 0; padding: .5rem 0; }
+
+  &__notice {
+    margin: .75rem 0 0;
+    padding: .6rem .75rem;
+    border-radius: var(--prx-radius-sm);
+    background: var(--prx-warn-wash);
+    border: 1px solid var(--prx-warn);
+    font-size: .9375rem;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem 1.25rem;
+    margin: .75rem 0 0;
+  }
+
+  &__confirm {
+    margin-top: .75rem;
+    padding: .75rem;
+    border-radius: var(--prx-radius-sm);
+    background: color-mix(in srgb, var(--prx-brand) 8%, transparent);
+
+    p { margin: 0; }
+  }
+}
+
 // Medications, allergies and conditions: a list each, with an inline add form
 // and name suggestions from the provider's list.
 .prx-health-list {

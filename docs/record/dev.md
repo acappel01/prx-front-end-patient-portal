@@ -2,7 +2,7 @@
 
 The Record tab holds what a patient looks up or keeps current: orders and their shipments, the
 lists a provider relies on (medications, allergies, conditions), the messages we send, a copy of
-the record, and past visits. Every screen reads the admin, and the admin reads the provider with
+the record, past visits, and a membership if they have one. Every screen reads the admin, and the admin reads the provider with
 the patient's own token. Nothing here is stored in this app.
 
 ## Screens
@@ -15,6 +15,7 @@ the patient's own token. Nothing here is stored in this app.
 | `/record/notifications` | a master switch and one switch per channel (email, text, in-app) | `GET` and `POST /patient/communication-preferences` | `app/(portal)/record/notifications/page.jsx`, `components/record/PreferencesForm.jsx` |
 | `/record/export` | ask for a copy of the record, then download it | `POST /patient/export`, `GET /patient/export/{id}`, `GET …/{id}/download` | `app/(portal)/record/export/page.jsx`, `components/record/ExportPanel.jsx`, `app/api/export/[id]/route.js` |
 | `/record/visits` | past visits, newest first | `GET /patient/encounters?per_page=50` | `app/(portal)/record/visits/page.jsx` |
+| `/record/membership` | each membership: price, next payment or end date, the card, a past-due notice, and Cancel or Undo | `GET /patient/memberships`, `POST /patient/memberships/{id}/cancel`, `POST …/{id}/resume` | `app/(portal)/record/membership/page.jsx`, `components/record/MembershipCard.jsx`, `components/record/MembershipLink.jsx` |
 
 Browser calls go through `lib/portalClient.js` and the `/api/portal` proxy. Each write is listed
 in `lib/portalProxy.js`; anything not listed is refused before it leaves this app.
@@ -51,10 +52,28 @@ export. The download goes through `app/api/export/[id]/route.js`, which streams 
 response as an attachment named `my-health-record.json` with `no-store`, so the file never sits in
 a cache. The provider's own download URL is dropped by the admin and never reaches the browser.
 
+## Membership
+
+A membership is bought on the storefront and billed by the admin; this screen shows it and lets
+the patient stop it.
+
+- The Record link shows only for a patient with a membership (`MembershipLink` reads the same
+  list). Reading the list also attaches memberships bought with the patient's address before the
+  account was verified, so a new member sees theirs on first sign-in.
+- It is never a portal module and never behind two-step verification: cancelling a recurring
+  charge has to be as easy to reach as joining was. The admin enforces this.
+- Cancel asks once more inline, in words: no further charge, active until the end of the paid
+  period (or ends now when a payment is past due), and a founding rate does not come back. Undo
+  ("Keep my membership") shows until that period ends.
+- Which button shows is the admin's `can_cancel` / `can_resume`; what cancel does (end of period,
+  or now when past due) is the admin's `CancelMembershipAction`. This screen decides neither.
+- The card is shown by brand and last four only. Changing the card is not built yet.
+
 ## What to keep true
 
 - No clinical value in a URL or a log line. That is why terminology search is a POST with the
   term in the body: a GET would write "HIV" into the access log of this app and the admin.
-- A failed write here may offer "try again", because none of them moves money. Approvals are
+- A failed write here may offer "try again", because none of them moves money (cancelling and
+  undoing a membership charge nothing). Approvals are
   the exception and never offer a retry after an uncertain outcome (see
   [Approvals](../approvals/dev.md)).

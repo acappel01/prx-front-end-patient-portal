@@ -1,4 +1,5 @@
 import ProfileDetails from '@/components/account/ProfileDetails';
+import MembershipLink from '@/components/record/MembershipLink';
 import TrackingLinks from '@/components/record/TrackingLinks';
 import SecurityHistory from '@/components/account/SecurityHistory';
 import TwoFactorStatusLink from '@/components/account/TwoFactorStatusLink';
@@ -88,6 +89,7 @@ export default async function RecordPage() {
               Past visits <span aria-hidden="true">›</span>
             </a>
           </li>
+          <MembershipLink />
           <li className="prx-row">
             <a href="/record/notifications">
               Messages we send you <span aria-hidden="true">›</span>
