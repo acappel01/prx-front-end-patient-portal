@@ -103,8 +103,8 @@ Outcomes, as the admin returns them in `code`:
 looks like the admin's 502 by status alone, and the request may have reached the provider, so the
 code decides, never the status. `lib/approvalOutcome.js` holds this rule as one pure function
 (tested in `scripts/approvalOutcome.test.mjs`); the component only renders what it returns. The
-proxy (`app/api/portal/[...path]/route.js`) catches a thrown admin call (timeout, reset) and
-answers 504 `{code: 'upstream_unreachable'}`, which lands in the last row. An unclear decline
+proxy (`app/api/portal/[...path]/route.js`) turns an unreachable admin (`adminFetch`'s status 0:
+a timeout after 35 s, or a reset) into 504 `{code: 'upstream_unreachable'}`, which lands in the last row. An unclear decline
 gets its own copy ("We could not confirm your answer…") and no button either.
 
 If the patient does nothing, the provider's review window (48 hours) closes and the provider

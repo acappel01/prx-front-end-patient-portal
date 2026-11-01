@@ -4,6 +4,7 @@ import { adminFetch } from '@/lib/adminApi';
 import { landingFor } from '@/lib/landing';
 import { guardRequest, readBody } from '@/lib/requestGuard';
 import { challengeToken, endChallenge, startSession, startTrustedDevice } from '@/lib/session';
+import { signInRefusal } from '@/lib/signInRefusal';
 
 /**
  * The second step of a two-step sign-in: the code in, the session cookie out.
@@ -44,11 +45,7 @@ export async function POST(request) {
       ...(recoveryCode ? { recovery_code: recoveryCode } : { code }),
       ...(payload?.trust_device === true ? { trust_device: true } : {}),
     },
-  }).catch(() => null);
-
-  if (!result) {
-    return NextResponse.json({ message: 'We couldn’t reach the server. Try again in a moment.' }, { status: 503 });
-  }
+  });
 
   if (result.ok && result.data?.token) {
     await endChallenge();
@@ -67,9 +64,19 @@ export async function POST(request) {
     return NextResponse.json({ message: result.message ?? 'Too many attempts. Wait a few minutes, then sign in again.', restart: true }, { status: 429 });
   }
 
+  // Every refusal of the code is a 422. Anything else is the admin or the
+  // network failing, never a wrong code (lib/signInRefusal.js); the challenge
+  // cookie is kept so the patient can try the same code again.
+  if (result.status === 422) {
+    return NextResponse.json({ message: result.errors?.code?.[0] ?? result.message ?? 'That code didn’t work.' }, { status: 422 });
+  }
+
+  const refusal = signInRefusal(result, '/patient/auth/two-factor');
+  if (refusal.log) console.error(refusal.log);
+
   return NextResponse.json(
-    { message: result.errors?.code?.[0] ?? result.message ?? 'That code didn’t work.' },
-    { status: result.status === 422 ? 422 : 400 }
+    { message: refusal.message, ...(refusal.requestId ? { request_id: refusal.requestId } : {}) },
+    { status: refusal.status }
   );
 }
 

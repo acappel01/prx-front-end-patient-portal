@@ -23,7 +23,7 @@ function formatDob(dob) {
 }
 
 export default async function ProfileDetails() {
-  const result = await adminFetch('/patient/profile').catch(() => null);
+  const result = await adminFetch('/patient/profile');
 
   if (!result?.ok || !result.data) return null;
 

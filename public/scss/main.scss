@@ -372,6 +372,9 @@ h2 { font-size: 1.0625rem; font-weight: 600; }
 .prx-reference { margin-top: .75rem; font-size: .8125rem; }
 .prx-reference__id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; user-select: all; }
 
+// The error boundaries' body (components/ui/ErrorState.jsx).
+.prx-error__actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+
 // Session timeout warning. Fixed over everything including the tab bar, since
 // the one thing on screen that matters is the choice it offers.
 .prx-timeout {

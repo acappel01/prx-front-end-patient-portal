@@ -29,14 +29,13 @@ export async function POST(request) {
     return NextResponse.json({ message: 'Choose a new password.' }, { status: 422 });
   }
 
-  let result;
-  try {
-    result = await adminFetch('/patient/auth/password/reset', {
-      method: 'POST',
-      token: '',
-      body: { token, password },
-    });
-  } catch {
+  const result = await adminFetch('/patient/auth/password/reset', {
+    method: 'POST',
+    token: '',
+    body: { token, password },
+  });
+
+  if (result.status === 0) {
     return NextResponse.json({ message: 'We could not reach the service. Please try again in a moment.' }, { status: 503 });
   }
 

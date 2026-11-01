@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { accountError } from '@/lib/accountErrors';
-import { adminFetch } from '@/lib/adminApi';
+import { adminFetch, revokeAfterResponse } from '@/lib/adminApi';
 import { guardRequest, readBody } from '@/lib/requestGuard';
-import { startSession } from '@/lib/session';
+import { sessionToken, startSession } from '@/lib/session';
 
 /**
  * Use a create-account link: set a password, and the admin creates the account
@@ -31,18 +31,21 @@ export async function POST(request) {
     return NextResponse.json({ message: 'Choose a password.' }, { status: 422 });
   }
 
-  let result;
-  try {
-    result = await adminFetch('/patient/auth/create-account', {
-      method: 'POST',
-      token: '',
-      body: { token, password },
-    });
-  } catch {
+  // A session already in this browser is replaced below, and revoked upstream.
+  const previousToken = await sessionToken();
+
+  const result = await adminFetch('/patient/auth/create-account', {
+    method: 'POST',
+    token: '',
+    body: { token, password },
+  });
+
+  if (result.status === 0) {
     return NextResponse.json({ message: 'We could not reach the service. Please try again in a moment.' }, { status: 503 });
   }
 
   if (result.ok && result.data?.token) {
+    revokeAfterResponse(previousToken);
     await startSession(result.data.token);
 
     return NextResponse.json({ data: { ok: true } }, { status: 201 });

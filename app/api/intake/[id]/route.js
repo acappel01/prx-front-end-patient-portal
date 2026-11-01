@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
-import { adminFetch } from '@/lib/adminApi';
+import { TIMEOUT_MS, adminFetch } from '@/lib/adminApi';
+import { rateLimitReply } from '@/lib/rateLimit';
 import { guardRequest, readBody } from '@/lib/requestGuard';
 import { sessionToken } from '@/lib/session';
 
@@ -83,10 +84,23 @@ export async function POST(request, context) {
     outgoing.append(name, new Blob([await file.arrayBuffer()], { type: file.type }), `${name}.${extension}`);
   }
 
-  const result = await adminFetch(`/patient/encounters/${id}/provide-information`, { method: 'POST', body: outgoing }).catch(() => null);
+  // The admin waits up to 120 s on the provider for this upload, so the limit
+  // here sits just past that (TIMEOUT_MS.upload) rather than at a read's 15 s.
+  const result = await adminFetch(`/patient/encounters/${id}/provide-information`, {
+    method: 'POST',
+    body: outgoing,
+    timeout: TIMEOUT_MS.upload,
+  });
 
-  if (!result) {
+  if (result.status === 0) {
+    // Sending again is safe: the provider does not duplicate what is on file.
     return NextResponse.json({ message: 'We couldn’t reach the server. Please try again.' }, { status: 503 });
+  }
+
+  if (result.status === 429) {
+    const reply = rateLimitReply(result.retryAfter);
+
+    return NextResponse.json(reply.body, { status: 429, headers: reply.headers });
   }
 
   return NextResponse.json(

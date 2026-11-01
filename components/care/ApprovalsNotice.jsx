@@ -6,7 +6,7 @@ import { adminFetch } from '@/lib/adminApi';
  * patient goes to look at their treatment. Quiet on failure.
  */
 export default async function ApprovalsNotice() {
-  const result = await adminFetch('/patient/approvals').catch(() => null);
+  const result = await adminFetch('/patient/approvals');
   const count = result?.ok ? (result.data?.items ?? []).length : 0;
 
   if (count === 0) return null;

@@ -2,7 +2,7 @@ import { adminFetch } from '@/lib/adminApi';
 
 /** Record's way into Security, with the current state. Quiet on failure. */
 export default async function TwoFactorStatusLink() {
-  const result = await adminFetch('/patient/two-factor').catch(() => null);
+  const result = await adminFetch('/patient/two-factor');
   const status = result?.ok ? result.data : null;
 
   if (!status || (!status.enabled && !status.offered)) return null;

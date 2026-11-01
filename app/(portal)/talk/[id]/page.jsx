@@ -22,7 +22,7 @@ export default async function ConversationPage({ params }) {
 
   const [page, list] = await Promise.all([
     adminFetch(`/patient/conversations/${id}/messages?per_page=50`),
-    adminFetch('/patient/conversations').catch(() => null),
+    adminFetch('/patient/conversations'),
   ]);
 
   if (page.status === 401) redirect('/login');

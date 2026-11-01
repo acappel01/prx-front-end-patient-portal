@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
  */
 export default async function SecurityPage({ searchParams }) {
   const required = (await searchParams)?.required === '1';
-  const { ok, status, data } = await adminFetch('/patient/two-factor').catch(() => ({ ok: false, status: 0 }));
+  const { ok, status, data } = await adminFetch('/patient/two-factor');
 
   if (status === 401) {
     return (
@@ -57,7 +57,7 @@ export default async function SecurityPage({ searchParams }) {
 
 /** Only for an account with two-step on — without it there is nothing to skip. Quiet on failure. */
 async function TrustedDevices() {
-  const result = await adminFetch('/patient/trusted-devices').catch(() => null);
+  const result = await adminFetch('/patient/trusted-devices');
 
   if (!result?.ok || !Array.isArray(result.data)) return null;
 

@@ -86,6 +86,35 @@ the storefront instead of the admin, or `ADMIN_API_TOKEN` lacks Public read whil
 `/config` is cached 5 minutes, so after fixing either, wait that out or clear `.next/cache/fetch-cache`
 and restart.
 
+## When the admin is slow or down
+
+Every admin call goes through `lib/adminApi.js`, and none of them may hang a screen or throw
+through it:
+
+- **Time limits** (`TIMEOUT_MS`): 15 s for a read, 35 s for a write, 60 s for the record download,
+  130 s for the visit upload. Each write limit sits just past the admin's own wait on the clinical
+  provider (`PRESCRIBE_RX_REQUEST_TIMEOUT`, 30 s; 120 s for the upload), so the admin's answer, with
+  its code and Reference, arrives first. `/config` keeps its own 8 s.
+- **`adminFetch()` never throws.** A refused connection, a reset or a timeout comes back as
+  `{ ok: false, status: 0 }` with everything else null, and is logged once with the method and path
+  (never the query or body). Every screen's `!ok` branch renders it as "can't load right now"; no
+  caller needs a `.catch`. Status 0 means "we do not know what the admin did", so a route handler
+  must translate it, never pass it through (`NextResponse` throws on status 0): the proxy answers
+  504 `upstream_unreachable`, the sign-in, account and keep-alive routes 503.
+  `adminDownload()` returns the raw response and still rejects; its one caller catches it.
+- **Error boundaries** for what still breaks: `app/(portal)/error.jsx` (inside the shell, so the
+  tabs stay), `app/error.jsx` (signed-out pages, still themed) and `app/global-error.jsx` (the root
+  layout itself failed; renders its own document with the stylesheet's neutral fallbacks). All
+  three render `components/ui/ErrorState.jsx`: "We can't load this right now", Try again, a way
+  home, and Next's error digest as the Reference. Nothing is logged from the browser. Unknown
+  addresses get `app/not-found.jsx` (branded through `AccountShell`) and, under the shell,
+  `app/(portal)/not-found.jsx`.
+- **429s say how long to wait.** The proxy and the intake route pass the admin's `Retry-After` on
+  (header and `retry_after`) and replace the message with `lib/rateLimit.js`'s "Too many tries.
+  Wait N seconds, then try again." `portalCall()` surfaces `retryAfter`. Forms that show the
+  answer's `message` need nothing else; a form with its own failure copy checks for 429 first
+  (`PreferencesForm`).
+
 ## Caching
 
 `no-store` on every route. No incremental regeneration, no shared cache, no CDN. A patient's view
