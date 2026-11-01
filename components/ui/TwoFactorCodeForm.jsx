@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { apiCall } from '@/lib/portalClient';
 
 /**
  * Enter the code from an authenticator app — or a recovery code.
@@ -28,33 +29,31 @@ export default function TwoFactorCodeForm({ trustDays = 0 }) {
     const value = form.get('code');
     const trust = form.get('trust') === 'on';
 
-    const response = await fetch('/api/session/two-factor', {
+    const response = await apiCall('/api/session/two-factor', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...(useRecovery ? { recovery_code: value } : { code: value }), trust_device: trust }),
-    }).catch(() => null);
+      body: { ...(useRecovery ? { recovery_code: value } : { code: value }), trust_device: trust },
+      signedIn: false,
+    });
 
-    const payload = await response?.json().catch(() => null);
-
-    if (response?.ok) {
-      window.location.assign(payload?.data?.next ?? '/');
+    if (response.ok) {
+      window.location.assign(response.data?.next ?? '/');
 
       return;
     }
 
-    if (payload?.restart) {
+    if (response.payload?.restart) {
       window.location.assign('/login');
 
       return;
     }
 
-    setError(payload?.message ?? 'Something went wrong. Please try again.');
-    setReference(payload?.request_id ?? null);
+    setError(response.message ?? 'Something went wrong. Please try again.');
+    setReference(response.requestId);
     setBusy(false);
   }
 
   async function backToSignIn() {
-    await fetch('/api/session/two-factor', { method: 'DELETE' }).catch(() => null);
+    await apiCall('/api/session/two-factor', { method: 'DELETE', signedIn: false });
     window.location.assign('/login');
   }
 

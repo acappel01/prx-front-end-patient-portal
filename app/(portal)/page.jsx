@@ -1,10 +1,9 @@
 import ActionStack from '@/components/stack/ActionStack';
 import ProgressSummary from '@/components/stack/ProgressSummary';
-import { redirect } from 'next/navigation';
-
 import TwoFactorPrompt from '@/components/account/TwoFactorPrompt';
 import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
+import { guard } from '@/lib/screenGuards';
 
 /**
  * Home.
@@ -24,15 +23,11 @@ import { adminFetch } from '@/lib/adminApi';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const { ok, status, data, code, requestId } = await adminFetch('/patient/home');
+  const result = await adminFetch('/patient/home');
+  const { ok, status, data, requestId } = result;
 
-  if (status === 403 && code === 'two_factor_setup_required') {
-    redirect('/record/security?required=1');
-  }
-
-  if (status === 401) {
-    // A token minted before an ability existed will lack it, and an expired
-    // one looks the same. Both are re-authentication, never a failure screen.
+  if (guard(result)) {
+    // An expired or revoked session: re-authentication, never a failure screen.
     return (
       <>
         <h1>Session expired</h1>

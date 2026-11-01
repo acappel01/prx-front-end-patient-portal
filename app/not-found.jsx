@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import AccountShell from '@/components/account/AccountShell';
 
 /**
@@ -10,9 +11,9 @@ export default function NotFound() {
       <h2>We can&rsquo;t find that page</h2>
       <p className="prx-muted">Check the address, or start from the beginning.</p>
       <p>
-        <a className="prx-task__cta" href="/">
+        <Link className="prx-task__cta" href="/">
           Go to your care
-        </a>
+        </Link>
       </p>
     </AccountShell>
   );

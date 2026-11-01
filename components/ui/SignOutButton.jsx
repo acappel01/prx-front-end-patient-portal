@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { apiCall } from '@/lib/portalClient';
+
 /**
  * Sign out.
  *
@@ -15,7 +17,7 @@ export default function SignOutButton() {
 
   async function signOut() {
     setBusy(true);
-    await fetch('/api/session', { method: 'DELETE' }).catch(() => null);
+    await apiCall('/api/session', { method: 'DELETE', signedIn: false });
     window.location.assign('/login');
   }
 

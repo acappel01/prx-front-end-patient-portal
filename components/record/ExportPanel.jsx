@@ -16,9 +16,20 @@ import { portalCall } from '@/lib/portalClient';
  * and say so, with a way to check again (lib/exportPoll.js).
  */
 
+/**
+ * @typedef {object} ExportState what the panel shows (lib/exportPoll.js)
+ * @property {string} status `idle`, the copy's status, `failed` or `poll_failed`
+ * @property {boolean} [ready]
+ * @property {string | null} [expires_at]
+ * @property {number} [failures] failed checks in a row
+ * @property {number | null} [retryAfter]
+ * @property {string | null} [message]
+ * @property {string | null} [reference]
+ */
+
 export default function ExportPanel() {
   const [exportId, setExportId] = useState(null);
-  const [state, setState] = useState({ status: 'idle' });
+  const [state, setState] = useState(/** @type {ExportState} */ ({ status: 'idle' }));
 
   useEffect(() => {
     if (!exportId || state.ready || state.status === 'failed' || state.status === 'poll_failed') return undefined;

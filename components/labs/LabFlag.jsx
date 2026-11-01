@@ -4,6 +4,7 @@ import { flagOf } from '@/lib/labs';
  * How one value reads against its range: a word, a glyph and a colour, so it
  * reads the same without colour. A critical value is bold and outlined.
  */
+/** @param {{ severity: string, direction?: string | null }} props */
 export default function LabFlag({ severity, direction }) {
   const flag = flagOf(severity, direction);
 

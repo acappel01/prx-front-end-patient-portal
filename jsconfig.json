@@ -1,7 +1,21 @@
 {
   "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "types": ["node", "react"],
     "paths": {
       "@/*": ["./*"]
     }
-  }
+  },
+  "include": ["app/**/*.js", "app/**/*.jsx", "components/**/*.jsx", "lib/**/*.js", "middleware.js", "instrumentation.js", "types/**/*.d.ts"],
+  "exclude": ["node_modules", ".next"]
 }

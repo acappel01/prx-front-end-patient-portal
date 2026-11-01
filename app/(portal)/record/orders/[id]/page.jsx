@@ -4,10 +4,9 @@ import TrackingLinks from '@/components/record/TrackingLinks';
 import LocalTime from '@/components/ui/LocalTime';
 import BackLink from '@/components/ui/BackLink';
 import Screen from '@/components/ui/Screen';
+import { isUuid } from '@/lib/ids';
 
 export const dynamic = 'force-dynamic';
-
-const UUID = /^[0-9a-fA-F-]{36}$/;
 
 /**
  * One order's shipments. An order filled by more than one pharmacy ships in
@@ -17,7 +16,7 @@ const UUID = /^[0-9a-fA-F-]{36}$/;
 export default async function OrderShipmentsPage({ params }) {
   const { id } = await params;
 
-  if (!UUID.test(id)) notFound();
+  if (!isUuid(id)) notFound();
 
   return (
     <>

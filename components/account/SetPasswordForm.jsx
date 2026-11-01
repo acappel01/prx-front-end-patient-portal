@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { apiCall } from '@/lib/portalClient';
+
 const MIN_LENGTH = 8;
 
 /**
@@ -44,16 +46,14 @@ export default function SetPasswordForm({ token, mode }) {
     setBusy(true);
     setError(null);
 
-    const response = await fetch(creating ? '/api/account/create' : '/api/account/reset', {
+    const response = await apiCall(creating ? '/api/account/create' : '/api/account/reset', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      body: { token, password },
       referrerPolicy: 'no-referrer',
-      body: JSON.stringify({ token, password }),
-    }).catch(() => null);
+      signedIn: false,
+    });
 
-    const payload = await response?.json().catch(() => null);
-
-    if (response?.ok) {
+    if (response.ok) {
       if (creating) {
         // Full navigation: the signed-in layout resolves the new session
         // server-side, and a soft push could render from a payload taken before
@@ -63,13 +63,13 @@ export default function SetPasswordForm({ token, mode }) {
         return;
       }
 
-      setDone(payload?.message ?? 'Your password has been changed. Sign in with your new password.');
+      setDone(response.message ?? 'Your password has been changed. Sign in with your new password.');
 
       return;
     }
 
-    setError(payload?.message ?? 'Something went wrong. Please try again in a moment.');
-    setLinkDead(response?.status === 422 && payload?.field === 'token');
+    setError(response.message ?? 'Something went wrong. Please try again in a moment.');
+    setLinkDead(response.status === 422 && response.payload?.field === 'token');
     setBusy(false);
     inFlight.current = false;
   }

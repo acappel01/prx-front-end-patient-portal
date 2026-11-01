@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { portalCall } from '@/lib/portalClient';
 
 /**
  * Goal weight (80–500 lbs, the provider's own bounds) and an optional target
@@ -11,7 +13,7 @@ import Reference from '@/components/ui/Reference';
  */
 export default function GoalForm({ current }) {
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [saved, setSaved] = useState(null);
   const [reference, setReference] = useState(null);
 
@@ -29,42 +31,38 @@ export default function GoalForm({ current }) {
     setErrors({});
     setReference(null);
 
-    const response = await fetch('/api/portal/patient/vitals/goals', {
+    const response = await portalCall('/patient/vitals/goals', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ goal_weight: weight === '' ? null : Number(weight), ...(date ? { goal_date: date } : {}) }),
-    }).catch(() => null);
-    const payload = await response?.json().catch(() => null);
+      body: { goal_weight: weight === '' ? null : Number(weight), ...(date ? { goal_date: date } : {}) },
+    });
 
     setBusy(false);
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
+    // Signing in again (portalCall has navigated away).
+    if (response.status === 401) return;
+
+    if (response.ok) {
+      setSaved(response.data);
 
       return;
     }
 
-    if (response?.ok) {
-      setSaved(payload?.data ?? null);
-
-      return;
-    }
-
-    if (response?.status === 422) {
-      const upstream = payload?.errors ?? {};
+    if (response.status === 422) {
+      const upstream = response.errors ?? {};
+      /** @type {Record<string, string>} */
       const mapped = {};
 
       for (const [name, messages] of Object.entries(upstream)) {
         mapped[['goal_weight', 'goal_date'].includes(name) ? name : 'form'] = Array.isArray(messages) ? messages[0] : String(messages);
       }
 
-      setErrors(Object.keys(mapped).length > 0 ? mapped : { form: payload?.message ?? 'Please check the values.' });
+      setErrors(Object.keys(mapped).length > 0 ? mapped : { form: response.message ?? 'Please check the values.' });
 
       return;
     }
 
     // Setting a goal is safe to repeat: it replaces the value, never adds one.
-    setReference(response && response.status >= 500 ? (payload?.request_id ?? null) : null);
+    setReference(response.status >= 500 ? response.requestId : null);
     setErrors({ form: 'We couldn’t save your goal. Please try again.' });
   }
 
@@ -76,9 +74,9 @@ export default function GoalForm({ current }) {
           Your goal is {saved.goal_weight} lbs{saved.goal_date ? ` by ${new Date(`${saved.goal_date}T12:00:00`).toLocaleDateString()}` : ''}. Your progress on Home is now measured against it.
         </p>
         <p>
-          <a className="prx-task__cta" href="/">
+          <Link className="prx-task__cta" href="/">
             Back to Home
-          </a>
+          </Link>
         </p>
       </div>
     );

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { adminDownload } from '@/lib/adminApi';
+import { isUuid } from '@/lib/ids';
 import { sessionToken } from '@/lib/session';
 
 /**
@@ -13,12 +14,10 @@ import { sessionToken } from '@/lib/session';
  */
 export const dynamic = 'force-dynamic';
 
-const UUID = /^[0-9a-fA-F-]{36}$/;
-
 export async function GET(request, context) {
   const { id } = await context.params;
 
-  if (!UUID.test(id)) return NextResponse.json({ message: 'Not found.' }, { status: 404 });
+  if (!isUuid(id)) return NextResponse.json({ message: 'Not found.' }, { status: 404 });
   if (!(await sessionToken())) return NextResponse.redirect(new URL('/login', request.url));
 
   const upstream = await adminDownload(`/patient/export/${id}/download`).catch(() => null);

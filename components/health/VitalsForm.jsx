@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { IDEMPOTENCY_HEADER } from '@/lib/idempotencyHeader';
+import { portalCall } from '@/lib/portalClient';
 
 /**
  * Log a reading.
@@ -94,6 +96,7 @@ const EXTRAS = [SYSTOLIC.name, DIASTOLIC.name, ...OTHERS.map((f) => f.name), 'no
 const EMPTY = Object.fromEntries([...FIELDS.map((f) => [f.name, '']), ['notes', '']]);
 
 function validate(values) {
+  /** @type {Record<string, string>} */
   const errors = {};
 
   for (const field of FIELDS) {
@@ -129,7 +132,7 @@ function validate(values) {
 
 export default function VitalsForm() {
   const [values, setValues] = useState(EMPTY);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [busy, setBusy] = useState(false);
   // 'saved' | 'unconfirmed' | 'expired' — the three ends of this form. There
   // is deliberately no 'failed' that leaves you on a filled form with a live
@@ -212,39 +215,40 @@ export default function VitalsForm() {
 
     attemptKey.current ??= crypto.randomUUID();
 
-    const response = await fetch('/api/portal/patient/vitals', {
+    // A 401 is this form's own "expired" outcome, not a navigation: the
+    // reading may need re-entering after signing in, and the screen says so.
+    const response = await portalCall('/patient/vitals', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': attemptKey.current },
-      body: JSON.stringify(body),
-    }).catch(() => null);
+      body,
+      headers: { [IDEMPOTENCY_HEADER]: attemptKey.current },
+      onUnauthenticated: 'none',
+    });
 
-    if (response?.ok) {
+    if (response.ok) {
       // The provider returns how weight moved since the previous reading. Read
       // the body rather than just the status — the admin and proxy both carry
       // `change_from_last` through, and a form that ignored it would be the
       // last layer to drop a field every other layer kept.
-      const payload = await response.json().catch(() => null);
-
-      setChange(payload?.data?.change_from_last ?? null);
+      setChange(response.data?.change_from_last ?? null);
       setOutcome('saved');
       setBusy(false);
 
       return;
     }
 
-    if (response?.status === 401) {
+    if (response.status === 401) {
       setOutcome('expired');
       setBusy(false);
 
       return;
     }
 
-    if (response?.status === 422) {
-      const payload = await response.json().catch(() => null);
-      const upstream = payload?.errors ?? {};
+    if (response.status === 422) {
+      const upstream = response.errors ?? {};
 
       // Nothing was written, so this is the one failure a patient can fix and
       // resubmit. Keep the values, name the field, leave the button live.
+      /** @type {Record<string, string>} */
       const mapped = {};
       const unplaceable = [];
 
@@ -264,7 +268,7 @@ export default function VitalsForm() {
         mapped.form =
           unplaceable.length > 0
             ? unplaceable.join(' ')
-            : payload?.message ?? 'Some of those values could not be accepted.';
+            : response.message ?? 'Some of those values could not be accepted.';
       }
 
       setErrors(mapped);
@@ -280,9 +284,7 @@ export default function VitalsForm() {
     // Everything else, including a network failure. The reading may be saved.
     // A reference only where support could use one: a provider failure (5xx)
     // or no answer at all. A 403/404/409 is an answer, not a fault.
-    const failure = await response?.json().catch(() => null);
-
-    setReference(!response || response.status >= 500 ? (failure?.request_id ?? null) : null);
+    setReference(response.status === 0 || response.status >= 500 ? response.requestId : null);
     setOutcome('unconfirmed');
     setBusy(false);
   }

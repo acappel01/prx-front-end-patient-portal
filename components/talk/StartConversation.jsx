@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import LocalTime from '@/components/ui/LocalTime';
+import { portalCall } from '@/lib/portalClient';
 
 /** Choose a visit, open its conversation, go there. */
 export default function StartConversation({ encounters }) {
@@ -14,27 +15,19 @@ export default function StartConversation({ encounters }) {
     setBusy(encounterId);
     setError(null);
 
-    const response = await fetch(`/api/portal/patient/encounters/${encounterId}/conversation`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    }).catch(() => null);
-    const payload = await response?.json().catch(() => null);
+    const response = await portalCall(`/patient/encounters/${encounterId}/conversation`, { method: 'POST', body: {} });
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
+    // Signing in again (portalCall has navigated away).
+    if (response.status === 401) return;
 
-      return;
-    }
-
-    if (response?.ok && payload?.data?.conversation_id) {
-      window.location.assign(`/talk/${payload.data.conversation_id}`);
+    if (response.ok && response.data?.conversation_id) {
+      window.location.assign(`/talk/${response.data.conversation_id}`);
 
       return;
     }
 
     setBusy(null);
-    setError(payload?.message ?? 'We couldn’t open that conversation. Please try again.');
+    setError(response.message ?? 'We couldn’t open that conversation. Please try again.');
   }
 
   return (

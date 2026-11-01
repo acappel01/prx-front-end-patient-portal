@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import LocalTime from '@/components/ui/LocalTime';
+import { portalCall } from '@/lib/portalClient';
 
 /**
  * One conversation with the care team: read, poll, reply.
@@ -60,6 +61,14 @@ function mergeOlder(existing, older) {
   return [...older.filter((message) => !seen.has(message.id)), ...existing];
 }
 
+/**
+ * @param {object} props
+ * @param {string} props.conversationId
+ * @param {import('@/lib/models').Message[]} props.initialMessages oldest first
+ * @param {string} props.initialCursor the newest message id, or a time
+ * @param {number} [props.initialPage]
+ * @param {number} [props.lastPage]
+ */
 export default function Thread({ conversationId, initialMessages, initialCursor, initialPage = 1, lastPage = 1 }) {
   const [messages, setMessages] = useState(initialMessages);
   const [page, setPage] = useState(initialPage);
@@ -83,7 +92,9 @@ export default function Thread({ conversationId, initialMessages, initialCursor,
   // session alive) in the background.
   const alive = useRef(true);
 
-  const base = `/api/portal/patient/conversations/${conversationId}/messages`;
+  // Every call goes through portalCall, which signs the patient in again on a
+  // 401 and sends a `required` two-step session to set it up.
+  const base = `/patient/conversations/${conversationId}/messages`;
 
   const poll = useCallback(async () => {
     if (polling.current || !cursor.current) return;
@@ -91,30 +102,21 @@ export default function Thread({ conversationId, initialMessages, initialCursor,
 
     try {
       for (let round = 0; round < 5; round++) {
-        const response = await fetch(`${base}?after=${encodeURIComponent(cursor.current)}&per_page=50`, { cache: 'no-store' }).catch(() => null);
+        const response = await portalCall(`${base}?after=${encodeURIComponent(cursor.current)}&per_page=50`);
 
-        if (response?.status === 401) {
-          window.location.assign('/login');
+        // Navigating away: signing in again, or two-step setup.
+        if (response.status === 401 || response.code === 'two_factor_setup_required') return;
 
-          return;
-        }
-
-        const payload = await response?.json().catch(() => null);
-
-        if (response?.status === 403 && payload?.code === 'two_factor_setup_required') {
-          window.location.assign('/record/security?required=1');
-
-          return;
-        }
-
-        if (!response?.ok || !payload?.data) {
+        if (!response.ok || !response.data) {
           failures.current += 1;
 
           return;
         }
 
         failures.current = 0;
-        const { messages: fresh = [], latest_cursor: next, has_more: more } = payload.data;
+        /** @type {import('@/lib/models').MessagesSince} */
+        const since = response.data;
+        const { messages: fresh = [], latest_cursor: next, has_more: more } = since;
 
         if (fresh.length > 0) setMessages((current) => merge(current, fresh));
         if (next) cursor.current = next;
@@ -200,39 +202,28 @@ export default function Thread({ conversationId, initialMessages, initialCursor,
     lastInteraction.current = Date.now();
 
     const next = page + 1;
-    const response = await fetch(`${base}?page=${next}&per_page=50`, { cache: 'no-store' }).catch(() => null);
+    const response = await portalCall(`${base}?page=${next}&per_page=50`);
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
-
-      return;
-    }
-
-    const payload = await response?.json().catch(() => null);
-
-    if (response?.status === 403 && payload?.code === 'two_factor_setup_required') {
-      window.location.assign('/record/security?required=1');
-
-      return;
-    }
+    // Navigating away: signing in again, or two-step setup.
+    if (response.status === 401 || response.code === 'two_factor_setup_required') return;
 
     if (!alive.current) return;
 
     setLoadingOlder(false);
 
-    if (!response?.ok || !Array.isArray(payload?.data)) {
+    if (!response.ok || !Array.isArray(response.data)) {
       setOlderNotice('We couldn’t load older messages. Please try again.');
 
       return;
     }
 
     // Newest first from the provider; this list reads oldest first.
-    const older = payload.data.slice().reverse();
+    const older = response.data.slice().reverse();
 
     heightBefore.current = document.documentElement.scrollHeight;
     setMessages((current) => mergeOlder(current, older));
-    setPage(payload.meta?.current_page ?? next);
-    setPages(payload.meta?.last_page ?? next);
+    setPage(response.meta?.current_page ?? next);
+    setPages(response.meta?.last_page ?? next);
   }
 
   function resume() {
@@ -253,31 +244,22 @@ export default function Thread({ conversationId, initialMessages, initialCursor,
     lastInteraction.current = Date.now();
     setPaused(false);
 
-    const response = await fetch(base, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    }).catch(() => null);
-
-    const payload = await response?.json().catch(() => null);
+    const response = await portalCall(base, { method: 'POST', body: { content } });
     setSending(false);
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
+    // Signing in again (portalCall has navigated away).
+    if (response.status === 401) return;
 
-      return;
-    }
-
-    if (response?.ok && payload?.data?.id) {
-      setMessages((current) => merge(current, [{ ...payload.data, is_mine: true }]));
+    if (response.ok && response.data?.id) {
+      setMessages((current) => merge(current, [{ ...response.data, is_mine: true }]));
       setDraft('');
       poll();
 
       return;
     }
 
-    if (response?.status === 422) {
-      setNotice(payload?.errors?.content?.[0] ?? payload?.message ?? 'That message could not be sent.');
+    if (response.status === 422) {
+      setNotice(response.errors?.content?.[0] ?? response.message ?? 'That message could not be sent.');
 
       return;
     }

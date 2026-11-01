@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { TIMEOUT_MS, adminFetch } from '@/lib/adminApi';
+import { isUuid } from '@/lib/ids';
 import { rateLimitReply } from '@/lib/rateLimit';
 import { guardRequest, readBody } from '@/lib/requestGuard';
 import { sessionToken } from '@/lib/session';
@@ -19,7 +20,6 @@ import { sessionToken } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
-const UUID = /^[0-9a-fA-F-]{36}$/;
 const MAX_BODY = 42 * 1024 * 1024;
 const MAX_FILE = 10 * 1024 * 1024;
 const PHOTOS = ['id_front', 'id_back', 'selfie_photo', 'body_photo'];
@@ -31,6 +31,7 @@ const FIELDS = [
 ];
 
 const TOO_LARGE = 'Those photos are too large. Each must be under 10 MB.';
+/** @type {import('@/lib/requestGuard').GuardOptions} */
 const BODY = { kind: 'multipart', maxBytes: MAX_BODY, tooLargeMessage: TOO_LARGE };
 
 function tooLarge() {
@@ -45,7 +46,7 @@ export async function POST(request, context) {
 
   const { id } = await context.params;
 
-  if (!UUID.test(id)) return NextResponse.json({ message: 'Not found.' }, { status: 404 });
+  if (!isUuid(id)) return NextResponse.json({ message: 'Not found.' }, { status: 404 });
   if (!(await sessionToken())) return NextResponse.json({ message: 'Unauthenticated.' }, { status: 401 });
 
   const read = await readBody(request, BODY);

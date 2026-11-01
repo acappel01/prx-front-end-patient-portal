@@ -14,6 +14,7 @@ import { sessionToken } from '@/lib/session';
  * the edge without access to the signature secret in every deployment shape,
  * and a route that authenticates in two places eventually authenticates in
  * neither. One gate, at the layout that owns the authenticated tree.
+ * (`middleware.js` exists, for security headers only; it never reads the session.)
  */
 export default async function PortalLayout({ children }) {
   if (!(await sessionToken())) {

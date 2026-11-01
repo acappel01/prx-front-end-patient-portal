@@ -173,7 +173,7 @@ function AddForm({ kind, onAdded, onCancel }) {
   const [picked, setPicked] = useState(null);
   const [matches, setMatches] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [reference, setReference] = useState(null);
   const searchRun = useRef(0);
 

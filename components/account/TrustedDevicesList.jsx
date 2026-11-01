@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import LocalTime from '@/components/ui/LocalTime';
+import { portalCall } from '@/lib/portalClient';
 
 /**
  * The browsers allowed to skip the code on this account, with a way to stop
@@ -19,21 +20,14 @@ export default function TrustedDevicesList({ devices: initial }) {
     setBusy(true);
     setError(null);
 
-    const response = await fetch(`/api/portal/patient/trusted-devices/${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    }).catch(() => null);
+    const response = await portalCall(`/patient/trusted-devices/${path}`, { method: 'POST', body: {} });
 
     setBusy(false);
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
+    // Signing in again (portalCall has navigated away).
+    if (response.status === 401) return;
 
-      return;
-    }
-
-    if (!response?.ok) {
+    if (!response.ok) {
       setError('We couldn’t do that. Please try again.');
 
       return;

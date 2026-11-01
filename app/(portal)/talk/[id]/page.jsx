@@ -1,12 +1,13 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import Thread from '@/components/talk/Thread';
 import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
+import { isUuid } from '@/lib/ids';
+import { guard } from '@/lib/screenGuards';
 
 export const dynamic = 'force-dynamic';
-
-const UUID = /^[0-9a-fA-F-]{36}$/;
 
 /**
  * One conversation. The first page is read here, server-side (newest first from
@@ -18,20 +19,19 @@ const UUID = /^[0-9a-fA-F-]{36}$/;
 export default async function ConversationPage({ params }) {
   const { id } = await params;
 
-  if (!UUID.test(id)) notFound();
+  if (!isUuid(id)) notFound();
 
   const [page, list] = await Promise.all([
     adminFetch(`/patient/conversations/${id}/messages?per_page=50`),
     adminFetch('/patient/conversations'),
   ]);
 
-  if (page.status === 401) redirect('/login');
-  if (page.status === 403 && page.code === 'two_factor_setup_required') redirect('/record/security?required=1');
+  if (guard(page)) redirect('/login');
 
   if (page.status === 404) {
     return (
       <>
-        <p className="prx-back"><a href="/talk">← Conversations</a></p>
+        <p className="prx-back"><Link href="/talk">← Conversations</Link></p>
         <h1>Conversation not found</h1>
         <p className="prx-muted">This conversation isn&rsquo;t available.</p>
       </>
@@ -41,7 +41,7 @@ export default async function ConversationPage({ params }) {
   if (!page.ok) {
     return (
       <>
-        <p className="prx-back"><a href="/talk">← Conversations</a></p>
+        <p className="prx-back"><Link href="/talk">← Conversations</Link></p>
         <h1>Messages</h1>
         <p className="prx-muted">We can&rsquo;t load these messages right now. Please try again in a moment.</p>
         {page.status >= 500 ? <Reference id={page.requestId} /> : null}
@@ -57,7 +57,7 @@ export default async function ConversationPage({ params }) {
 
   return (
     <>
-      <p className="prx-back"><a href="/talk">← Conversations</a></p>
+      <p className="prx-back"><Link href="/talk">← Conversations</Link></p>
       <h1>{subject ?? 'Messages'}</h1>
       <Thread
         conversationId={id}

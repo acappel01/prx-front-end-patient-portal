@@ -74,12 +74,16 @@ encounter, prescription or order identifier as authority — resolve it from the
 patient's own set and reject anything outside it. Forwarding an unfiltered request body is how a
 patient ends up acting on another patient's record.
 
-**Least-privilege abilities.** Approving a charge is a distinct ability from updating a profile.
-A session may be scoped without it.
-
-**Handle a missing ability as re-authentication, not failure.** Tokens minted before an ability
-existed will lack it. Detect the authorization failure and prompt re-auth — never render a
-control that is guaranteed to fail.
+**What the admin actually enforces on a patient token.** Every patient token carries the single
+`patient:*` ability, and no admin route checks abilities, so there is no per-action scoping to
+rely on (approving a charge is not a separate ability). The controls that do apply are: the
+admin's patient guard (a patient token is only a patient token); the session lifetime (idle limit
+and absolute cap, see below); the two-step gate (`403 {code: two_factor_setup_required}` under the
+`required` policy); every identifier pinned to the session's own chart, with ownership checks on
+anything addressed by id; writes limited to what the admin allows (and, here, to the proxy
+allowlist); and, before a charge, the patient confirming the total (`acknowledged_total` must match
+what the admin will charge). A 401 is a dead or expired session and every screen treats it as
+"sign in again"; nothing in the portal infers a missing ability from it.
 
 ## Session and transport
 
@@ -113,8 +117,32 @@ control that is guaranteed to fail.
 - No third-party script, font, or asset host on an authenticated page. The admin's Google Fonts
   stylesheet is relayed through this origin (`/fonts/stylesheet`, `/fonts/file/*`, `lib/fonts.js`):
   only `fonts.googleapis.com/css2?…` and font files under `fonts.gstatic.com` are fetched, and a
-  stylesheet that would still load anything from elsewhere is dropped whole. Theme > Custom CSS is
+  stylesheet that would still load anything from elsewhere is dropped whole. `/fonts/file/*`
+  relays only the files the brand's current stylesheet names; any other path is a 404 (`no-store`),
+  so it is not a free relay and cannot fill the shared cache. Theme > Custom CSS is
   applied only when it loads nothing (`url(`, `image-set(`, `@import`) and holds no `<` or `\`.
+- **The browser enforces that too** (`middleware.js`, `lib/securityHeaders.js`). Every page gets:
+  - `Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<per request>';
+    style-src 'self' 'unsafe-inline'; img-src 'self' data: <admin origin>; font-src 'self';
+    connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`.
+    The middleware mints the nonce and puts the policy on the request as well as the response,
+    which is where the App Router reads the nonce it stamps on its own scripts. Styles keep
+    `'unsafe-inline'` because the theme tokens and Custom CSS are inline `<style>` and progress bars
+    use `style=""` (a nonce cannot cover an attribute, and a nonce in `style-src` would turn
+    `'unsafe-inline'` off). `img-src` names the admin's origin for the logo and favicon; `data:` is
+    the two-step QR code. `next dev` adds `'unsafe-eval'` to scripts; production never does.
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+
+  A deployment extends a directive with `CSP_IMG_SRC`, `CSP_CONNECT_SRC`, `CSP_SCRIPT_SRC`,
+  `CSP_STYLE_SRC`, `CSP_FONT_SRC`, `CSP_FRAME_SRC`, `CSP_MEDIA_SRC` or `CSP_WORKER_SRC`
+  (space-separated hosts or schemes). Only hosts, schemes and `'wasm-unsafe-eval'` are accepted;
+  anything else (`'unsafe-inline'`, a `;`) is dropped and logged, so an env var cannot reopen inline
+  script. `PERMISSIONS_ALLOW="camera microphone"` turns those features on for this origin only, for
+  the day a video visit ships (with `CSP_FRAME_SRC`/`CSP_CONNECT_SRC` for its SDK). The middleware
+  sets headers only: it never reads the session, which the `(portal)` layout and each route handler
+  still check. Never add a `<script>` tag or `dangerouslySetInnerHTML` script; there is no nonce for
+  it to use.
 - **A signed cookie proves we minted it, not that the admin still honours it.** A claim revokes
   other sessions, so a validly signed cookie can hold a dead token. `/login` asks `/patient/auth/me`
   before bouncing to `/` — trusting the signature there was an inescapable
@@ -123,6 +151,12 @@ control that is guaranteed to fail.
   navigation and spends the patient's per-account API budget (120/min) on what each screen already
   learns from its own 401. Screens under it turn a 401 into a link. (`/me` and logout left the
   per-IP sign-in limiter on 2026-09-13 — a 429'd logout used to leave the token alive.)
+- **One implementation of a signed cookie** (`readSigned(name, purpose)` / `writeSigned(name, value,
+  purpose, maxAge)` in `lib/session.js`). The session, the two-step challenge and the trusted browser
+  all go through it: httpOnly, Secure, SameSite=Strict, `<value>.<HMAC>`, the purpose inside the
+  signed input (the session's input stays un-prefixed so live sessions stay valid), compared in
+  constant time, and a bad cookie reads as no cookie. `scripts/security.test.mjs` copies a challenge
+  into the session cookie and expects it refused.
 - **Signing in again revokes the old token.** When a sign-in (or a create-account link) succeeds
   while this browser still holds a session cookie, the route reads the old token first and, once the
   response has gone (`revokeAfterResponse()` in `lib/adminApi.js`, Next's `after()`), calls the
@@ -169,7 +203,8 @@ control that is guaranteed to fail.
   goes through four POST proxy entries. Recovery codes exist only in the confirm/regenerate response
   and component state; nothing stores them. The QR code is an admin-rendered SVG data URI. Under the
   `required` policy the admin answers other screens with `403 {code: two_factor_setup_required}`;
-  `Screen` and Home redirect to `/record/security?required=1`, which `adminFetch` makes possible by
+  every server screen (`guard()` in `lib/screenGuards.js`) and every browser call (`lib/portalClient.js`)
+  redirect to `/record/security?required=1` (`TWO_FACTOR_SETUP_PATH`, `lib/landing.js`), which `adminFetch` makes possible by
   passing `code` through. The Home invitation's "Not now" is a plain 30-day preference cookie
   holding no identity, and hides the card through React state — removing the node directly made the
   next tab tap crash the page (React unmounting a node that was gone). Setting it up the first time

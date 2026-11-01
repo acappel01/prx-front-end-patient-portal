@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import ClaimRecordForm from '@/components/account/ClaimRecordForm';
 import ClaimSignIn from '@/components/account/ClaimSignIn';
 import LoginForm from '@/components/ui/LoginForm';
@@ -70,9 +71,9 @@ export default async function ClaimPage({ params }) {
       <Shell brand={brand}>
         <h2>Your record is already connected</h2>
         <p>
-          <a className="prx-task__cta" href="/">
+          <Link className="prx-task__cta" href="/">
             Go to your care
-          </a>
+          </Link>
         </p>
       </Shell>
     );

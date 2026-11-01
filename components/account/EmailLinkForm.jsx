@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { apiCall } from '@/lib/portalClient';
+
 /**
  * Ask for an emailed link — to create an account (`intent="register"`) or to
  * reset a password (`intent="forgot"`).
@@ -26,25 +28,23 @@ export default function EmailLinkForm({ intent, submitLabel }) {
 
     const form = new FormData(event.currentTarget);
 
-    const response = await fetch('/api/account/link', {
+    const response = await apiCall('/api/account/link', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ intent, email: form.get('email') }),
-    }).catch(() => null);
-
-    const payload = await response?.json().catch(() => null);
+      body: { intent, email: form.get('email') },
+      signedIn: false,
+    });
 
     inFlight.current = false;
 
-    if (response?.status === 202) {
-      setState({ phase: 'sent', message: payload?.message ?? null });
+    if (response.status === 202) {
+      setState({ phase: 'sent', message: response.message });
 
       return;
     }
 
     setState({
       phase: 'failed',
-      message: payload?.message ?? 'We could not send the email. Please try again in a moment.',
+      message: response.message ?? 'We could not send the email. Please try again in a moment.',
     });
   }
 
