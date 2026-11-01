@@ -76,7 +76,7 @@ external refund or void, and re-pointing an authorization reference); see
 ## Run it
 
 ```bash
-cp .env.example .env      # ADMIN_API_BASE_URL (the admin, plus /api/v1) and SESSION_SECRET
+cp .env.example .env      # ADMIN_API_BASE_URL (the admin, plus /api/v1), SESSION_SECRET and PORTAL_URL (this app's origin)
 npm ci
 npm run dev
 ```

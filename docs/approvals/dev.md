@@ -79,7 +79,10 @@ would use (brand and last four only). Approving takes two taps: **Approve $x** o
 confirmation that names the amount and the card, and **Yes, charge $x** sends the accept.
 
 - Each attempt gets a fresh `crypto.randomUUID()` as its idempotency key. The admin forwards it
-  to the provider as the `Idempotency-Key` header.
+  to the provider as the `Idempotency-Key` header. The key is kept until the attempt has a clear
+  answer, in component state and in this tab's `sessionStorage` (`prx-approval-key:<approval id>`),
+  so approving again after a reload of an uncertain attempt sends the same key and the provider
+  replays the first outcome. A clear answer clears it; storage that throws only loses the replay.
 - The admin compares the displayed total with the provider's amount due before it calls the
   provider, so a stale page gets `price_mismatch` and nothing is charged.
 - The admin stores every decision as evidence (item snapshot, amounts, card shown, key, IP,
@@ -89,14 +92,20 @@ Outcomes, as the admin returns them in `code`:
 
 | Outcome | HTTP | The page shows | Retry control |
 |---|---|---|---|
-| `charged` / `declined` | 200 | the confirmation | no |
-| `payment_required` / `gateway_declined` | 402 | "The card was not accepted", message the care team | no |
-| `already_resolved` / `price_mismatch` | 409 | reload the page | no |
-| `uncertain` | 202 | "We are checking with the pharmacy" | **no** |
-| `error` | 502 | "Something went wrong" | yes, with a new key |
+| `charged` / `declined` | 200 | the admin's confirmation | no |
+| `payment_required` / `gateway_declined` | 402 | the admin's sentence (nothing charged, contact us) | no |
+| `already_resolved` / `price_mismatch` | 409 | the admin's sentence | no |
+| `uncertain` | 202 | the admin's "We could not confirm the payment. Please do not try again…" | **no** |
+| `error` | 502 with `code: 'error'` | the admin's "Nothing was charged. Please try again." | yes, with a new key |
+| anything else: network drop (status 0), proxy 504 `upstream_unreachable`, a 5xx or 502/504 with no code, an unknown code or outcome | — | "We could not confirm the payment, and it may still be processing. Please do not try again. Check back on this page later, or contact support if it does not update." plus a Reference when there is one | **no**, key kept |
 
-A network failure in the browser (status 0) is treated as `uncertain`, because the request may
-have reached the provider.
+**Only `code: 'error'` is retryable.** A 502 or 504 from the web server in front of the admin
+looks like the admin's 502 by status alone, and the request may have reached the provider, so the
+code decides, never the status. `lib/approvalOutcome.js` holds this rule as one pure function
+(tested in `scripts/approvalOutcome.test.mjs`); the component only renders what it returns. The
+proxy (`app/api/portal/[...path]/route.js`) catches a thrown admin call (timeout, reset) and
+answers 504 `{code: 'upstream_unreachable'}`, which lands in the last row. An unclear decline
+gets its own copy ("We could not confirm your answer…") and no button either.
 
 If the patient does nothing, the provider's review window (48 hours) closes and the provider
 captures the original purchase only. The added item is never charged and does not ship. The Home

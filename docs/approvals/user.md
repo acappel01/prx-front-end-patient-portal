@@ -39,8 +39,14 @@ waiting.
 
 ## When an outcome is uncertain
 
-Occasionally a charge succeeds but the record of it fails to save. The patient sees a pending
-state rather than a confirmation, and the item is flagged for reconciliation.
+Occasionally a charge succeeds but the record of it fails to save, or the portal loses the
+connection before the answer arrives. The patient is told: "We could not confirm the payment, and
+it may still be processing. Please do not try again. Check back on this page later, or contact
+support if it does not update." No approve button is offered, and the message may carry a
+**Reference** code: ask for it, it finds the request in the logs. The portal offers *Try again*
+only when the admin knows nothing was charged ("Nothing was charged. Please try again."), and if
+the patient reloads and approves again the same attempt is replayed, not charged a second time.
+The item is flagged for reconciliation.
 
 **Do not ask the patient to try again** — that risks a second charge. Escalate for reconciliation
 instead.

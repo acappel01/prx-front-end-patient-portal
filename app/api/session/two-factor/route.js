@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
 import { landingFor } from '@/lib/landing';
+import { guardRequest, readBody } from '@/lib/requestGuard';
 import { challengeToken, endChallenge, startSession, startTrustedDevice } from '@/lib/session';
 
 /**
@@ -16,13 +17,18 @@ import { challengeToken, endChallenge, startSession, startTrustedDevice } from '
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
+  const refused = guardRequest(request);
+  if (refused) return refused;
+
   const challenge = await challengeToken();
 
   if (!challenge) {
     return NextResponse.json({ message: 'Your sign-in timed out. Sign in again.', restart: true }, { status: 410 });
   }
 
-  const payload = await request.json().catch(() => null);
+  const read = await readBody(request);
+  if (read.response) return read.response;
+  const payload = read.body;
   const code = typeof payload?.code === 'string' ? payload.code : null;
   const recoveryCode = typeof payload?.recovery_code === 'string' ? payload.recovery_code : null;
 
@@ -68,7 +74,10 @@ export async function POST(request) {
 }
 
 /** "Back to sign in": forget the challenge. */
-export async function DELETE() {
+export async function DELETE(request) {
+  const refused = guardRequest(request, { kind: 'none' });
+  if (refused) return refused;
+
   await endChallenge();
 
   return NextResponse.json({ data: { ok: true } });

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
 import { landingFor } from '@/lib/landing';
+import { guardRequest, readBody } from '@/lib/requestGuard';
 import { endSession, startChallenge, startSession, startTrustedDevice, trustedDeviceToken } from '@/lib/session';
 
 /**
@@ -16,7 +17,12 @@ import { endSession, startChallenge, startSession, startTrustedDevice, trustedDe
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  const payload = await request.json().catch(() => null);
+  const refused = guardRequest(request);
+  if (refused) return refused;
+
+  const read = await readBody(request);
+  if (read.response) return read.response;
+  const payload = read.body;
 
   if (!payload?.email || !payload?.password) {
     return NextResponse.json({ message: 'Email and password are required.' }, { status: 422 });
@@ -97,7 +103,11 @@ export async function GET() {
   );
 }
 
-export async function DELETE() {
+export async function DELETE(request) {
+  // Sign-out is a write too: a sibling-site script must not end a session.
+  const refused = guardRequest(request, { kind: 'none' });
+  if (refused) return refused;
+
   // Best-effort revocation upstream; the local cookie is cleared either way.
   // A sign-out that leaves the cookie because the network hiccuped is the
   // worst possible outcome on a shared device.

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { approvalOutcome } from '@/lib/approvalOutcome';
 import { money } from '@/lib/format';
 import { portalCall } from '@/lib/portalClient';
 
@@ -16,10 +17,16 @@ import { portalCall } from '@/lib/portalClient';
  *   a total that no longer matches (`price_mismatch`).
  * - **One idempotency key per attempt.** Minted when the patient confirms and
  *   reused if the same attempt is sent again, so a double tap or a resend
- *   replays the first outcome instead of charging twice.
- * - **Never offer a retry after an uncertain outcome.** A dropped connection
- *   or `uncertain` means money may have moved. The item shows as pending and
- *   the page stops offering the button until it is reloaded.
+ *   replays the first outcome instead of charging twice. The key is also kept
+ *   in this tab's sessionStorage until the attempt has a clear answer, so an
+ *   approve after a reload replays the uncertain attempt rather than starting
+ *   a new charge.
+ * - **Retry only after `code: 'error'`**, the one answer where the admin knows
+ *   nothing was charged; that retry gets a new key. Anything else unclear (a
+ *   dropped connection, a 5xx or 504 without a code, an unknown code) is
+ *   uncertain: money may have moved. The item shows as possibly processing,
+ *   the key is kept, and no button is offered. `lib/approvalOutcome.js`
+ *   decides which is which.
  */
 export default function ApprovalList({ items, card }) {
   return (
@@ -40,9 +47,13 @@ function ApprovalItem({ item, card }) {
   const cardLabel = card ? `${capitalise(card.card_brand)} ending ${card.last_four}` : null;
 
   async function decide(decision) {
-    // The same attempt keeps its key; a new decision after an answer gets a new one.
-    const key = attempt ?? crypto.randomUUID();
-    setAttempt(key);
+    // An accept keeps its key until it has a clear answer: this attempt's, or
+    // one left uncertain before a reload. A decline charges nothing and needs none.
+    const key = decision === 'accept' ? (attempt ?? storedKey(item.approval_id) ?? crypto.randomUUID()) : null;
+    if (key) {
+      setAttempt(key);
+      storeKey(item.approval_id, key);
+    }
     setStage('busy');
 
     const response = await portalCall(`/patient/approvals/${item.approval_id}/${decision}`, {
@@ -50,28 +61,21 @@ function ApprovalItem({ item, card }) {
       body: decision === 'accept' ? { acknowledged_total: item.amount_due, idempotency_key: key } : {},
     });
 
-    const outcome = response.data?.outcome ?? response.code ?? (response.status === 0 ? 'uncertain' : 'error');
+    const answer = approvalOutcome(response, decision);
+    setResult(answer);
 
-    setResult({
-      outcome,
-      message:
-        response.data?.message ??
-        response.message ??
-        (outcome === 'uncertain'
-          ? 'We could not confirm the payment. Please do not try again: we will check it and update this item.'
-          : 'Something went wrong. Nothing was charged.'),
-      reference: response.status >= 500 ? response.requestId : null,
-    });
-
-    // Only `error` (nothing charged) may be tried again, with a fresh key.
-    if (outcome === 'error') {
-      setAttempt(null);
-      setStage('idle');
+    // Uncertain: keep the key (state and storage), offer nothing.
+    if (answer.uncertain) {
+      setStage('done');
 
       return;
     }
 
-    setStage('done');
+    setAttempt(null);
+    storeKey(item.approval_id, null);
+
+    // Only `error` (nothing charged) may be tried again, with a fresh key.
+    setStage(answer.retry ? 'idle' : 'done');
   }
 
   return (
@@ -138,6 +142,27 @@ function Row({ label, value }) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+// sessionStorage can be missing or throw (private mode, blocked storage); the
+// in-memory key still covers this page, so a failure here is only a lost replay.
+const KEY_PREFIX = 'prx-approval-key:';
+
+function storedKey(approvalId) {
+  try {
+    return window.sessionStorage.getItem(KEY_PREFIX + approvalId);
+  } catch {
+    return null;
+  }
+}
+
+function storeKey(approvalId, key) {
+  try {
+    if (key) window.sessionStorage.setItem(KEY_PREFIX + approvalId, key);
+    else window.sessionStorage.removeItem(KEY_PREFIX + approvalId);
+  } catch {
+    // See above.
+  }
 }
 
 function capitalise(value) {

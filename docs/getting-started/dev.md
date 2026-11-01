@@ -12,9 +12,10 @@ App Router's server components are what keep clinical data out of the browser bu
 ## Run it
 
 ```bash
-cp .env.example .env      # fill in ADMIN_API_BASE_URL and SESSION_SECRET
+cp .env.example .env      # fill in ADMIN_API_BASE_URL, SESSION_SECRET and PORTAL_URL
 npm ci
 npm run dev
+npm test                  # node --test over scripts/*.test.mjs
 ```
 
 `ADMIN_API_BASE_URL` is the **admin's** origin plus `/api/v1` (for example
@@ -29,12 +30,19 @@ for it first.
 deliberate — an unset secret silently degrading to an unsigned cookie is a control that looks
 present and is absent in production.
 
+`PORTAL_URL` is required for the same reason. It is the `Origin` every write must come from
+(`lib/requestGuard.js`, see `security/dev.md` → Cross-origin writes). Set it to the exact origin the
+browser shows, `https://portal.example.com` in production and `http://localhost:3000` for
+`npm run dev`. Unset or not a URL, every sign-in, form and button that changes something answers
+500 `{code: 'misconfigured'}` and the service log says `[requestGuard] PORTAL_URL is not
+configured…` once. Pages still render.
+
 | Variable | Required | What it is |
 |---|---|---|
 | `ADMIN_API_BASE_URL` | Yes | The admin's origin plus `/api/v1`. Server-side only; there is no `NEXT_PUBLIC_` variant. |
 | `SESSION_SECRET` | Yes | Signs the session cookie. `openssl rand -hex 32`. |
 | `ADMIN_API_TOKEN` | When the admin's **Require tokens** is on for **Public read** | An API client token from the admin (**Users & access > API clients**) with **Public read**, sent only on the anonymous `/config` read so the brand loads. Patient calls carry the patient's own session token instead. |
-| `PORTAL_URL` | No | Listed in `.env.example` but not read by the code today. The admin builds every emailed link from its own `PATIENT_PORTAL_URL`, which must be this app's public origin. |
+| `PORTAL_URL` | Yes | This app's public origin, the only `Origin` a write is accepted from when the browser does not send `Sec-Fetch-Site: same-origin`. Same value as the admin's `PATIENT_PORTAL_URL`. |
 
 On the admin, `PATIENT_PORTAL_URL` must be this app's origin (account, reset and claim emails link
 here), and `TRUSTED_PROXIES` must name this host so the patient's address, which this app forwards
@@ -56,7 +64,8 @@ as `X-Forwarded-For`, is the one the admin records and rate-limits on.
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
 | `app/api/export/[id]/` | Streams a ready copy of the record from the admin (`/patient/export/{id}/download`). Not a JSON relay, so outside the proxy. |
-| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `portalClient` (browser calls through the proxy), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
+| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (browser calls through the proxy), `approvalOutcome` (what an approval answer means), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
+| `scripts/*.test.mjs` | Unit tests for the pure helpers (`npm test`, Node's built-in runner, no dependencies). |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |
 
