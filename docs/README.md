@@ -18,4 +18,4 @@ gitignored. Do not add them here.
 | [Lab results](labs/dev.md) | results list, flags, charts with the normal range, featured values, release and critical rules | — |
 | [Vitals](vitals/dev.md) | capture and list, and why a failed save never offers a retry | — |
 
-- [`getting-started/dev.md`](getting-started/dev.md) — stack, how to run it, where things live, how to add a screen
+- [`getting-started/dev.md`](getting-started/dev.md): stack, environment variables, how to run it, where things live, how to add a screen

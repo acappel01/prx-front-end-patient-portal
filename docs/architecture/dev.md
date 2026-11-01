@@ -31,10 +31,11 @@ pricing are server-side. **No clinical evaluator runs in a browser.**
 The portal is a skeleton, so the admin drives:
 
 - branding and theme tokens (shared vocabulary with the storefront)
-- which modules are enabled (Settings > Patient portal). Today `messaging` (the Talk tab) and
-  `vitals` (the Health tab), from `/config` `portal.modules`; a module that is false drops its tab
-  (`lib/destinations.js`), and a missing key is on. Approvals, labs and subscriptions become modules
-  as their screens land.
+- which modules are enabled (Settings > Patient portal), from `/config` `portal.modules`:
+  `messaging` (the Talk tab), `vitals` (health tracking on the Health tab), `labs` (lab results on
+  the Health tab) and `health_record` (medications, allergies and conditions under Record). A module
+  that is false drops its tab or section (`lib/destinations.js`; Health shows while `vitals` or
+  `labs` is on), and a missing key is on. Approvals and the membership screen have no toggle.
 - every operator-facing string, including compliance copy
 - consent policy versions and their text
 - session lifetime and re-authentication rules
@@ -92,11 +93,11 @@ is never served to another request.
 
 ## Module boundaries
 
-Each functional area (approvals, messaging, vitals, subscriptions) is independently toggleable
+Each optional area (messaging, vitals, labs, the health record lists) is independently toggleable
 from the admin and must degrade cleanly when disabled — a disabled module renders nothing, never
 a broken control.
 
 The admin enforces the toggles too: a call to a switched-off module answers 403 with
-`code: "module_off"`, which `Screen` renders as a plain "not available" message. Modules today:
-Talk, Health, and Medications, allergies and conditions (`health_record`). Approvals have no
-toggle, because an added item that nobody can approve would never ship.
+`code: "module_off"`, which `Screen` renders as a plain "not available" message. The admin
+enforces `health_record` and `labs` this way; `messaging` and `vitals` are hidden here only.
+Approvals have no toggle, because an added item that nobody can approve would never ship.

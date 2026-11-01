@@ -56,11 +56,34 @@ gitignored. Nothing agent-authored ships in this repository.
 
 Start with [`docs/README.md`](docs/README.md).
 
-## Status
+## What it does today
 
-Documented ahead of code. The shell, auth and read-only views are unblocked and can start now;
-money-touching screens wait on two provider endpoints that do not yet exist (external reversal
-recording, and re-pointing an authorization reference). See `docs/approvals/dev.md`.
+- **Account:** sign in with two-step verification and trusted browsers, create an account and
+  reset a password from emailed links, connect a medical record (`/connect`), sign-in history.
+- **Home:** the server-ranked action stack (visits, held information, approvals, lab results).
+- **Care:** prescriptions, items the provider added for the patient to approve or decline, and
+  the information a held visit is waiting on (including photo uploads).
+- **Talk:** message threads with the care team, polled.
+- **Health:** readings and trends, a weight goal, and lab results with flags and charts.
+- **Record:** orders and every shipment, past visits, medications, allergies and conditions,
+  message preferences, a downloadable copy of the record, and memberships (cancel and undo).
+
+The admin can switch off Talk, health tracking, lab results and the health record lists. Two
+provider endpoints are still missing for brands that charge on their own gateway (recording an
+external refund or void, and re-pointing an authorization reference); see
+[`docs/approvals/dev.md`](docs/approvals/dev.md). Nothing in the portal depends on them today.
+
+## Run it
+
+```bash
+cp .env.example .env      # ADMIN_API_BASE_URL (the admin, plus /api/v1) and SESSION_SECRET
+npm ci
+npm run dev
+```
+
+Every variable, and what the admin needs set to match, is in
+[`docs/getting-started/dev.md`](docs/getting-started/dev.md). For production, `npm run build` then
+`npm run start` behind a reverse proxy, as for the storefront.
 
 ## Fork
 

@@ -66,7 +66,7 @@ credential they do not hold.
 ## The status distinction is not free
 
 It exists only because the admin stops collapsing upstream failures into one 500 — see
-`atlas-protocol-admin/docs/portal/dev.md`, *Upstream failures keep their status*. Two layers on
+the admin's [Patient portal developer reference](https://github.com/acappel01/PRX-Client-Backend-Framework/blob/main/docs/portal/dev.md#upstream-failures-keep-their-status), *Upstream failures keep their status*. Two layers on
 this side then have to carry the 422's `errors` array through: `lib/adminApi.js` unwraps it from
 the envelope, and the proxy route forwards it on a failure. **Dropping it anywhere in that chain
 turns "check the weight" back into "something was wrong", which is indistinguishable from the
