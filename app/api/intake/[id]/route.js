@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
+import { guardRequest, readBody } from '@/lib/requestGuard';
 import { sessionToken } from '@/lib/session';
 
 /**
@@ -28,64 +29,30 @@ const FIELDS = [
   'weight', 'height_feet', 'height_inches', 'drivers_license_number', 'drivers_license_state',
 ];
 
-async function readCapped(request, limit) {
-  if (!request.body) return new Uint8Array(0);
-
-  const reader = request.body.getReader();
-  const chunks = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-
-    if (done) break;
-
-    total += value.byteLength;
-
-    if (total > limit) {
-      await reader.cancel();
-
-      return null;
-    }
-
-    chunks.push(value);
-  }
-
-  const out = new Uint8Array(total);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  return out;
-}
+const TOO_LARGE = 'Those photos are too large. Each must be under 10 MB.';
+const BODY = { kind: 'multipart', maxBytes: MAX_BODY, tooLargeMessage: TOO_LARGE };
 
 function tooLarge() {
-  return NextResponse.json({ message: 'Those photos are too large. Each must be under 10 MB.' }, { status: 413 });
+  return NextResponse.json({ message: TOO_LARGE }, { status: 413 });
 }
 
 export async function POST(request, context) {
+  // Origin, multipart type and the declared size; the body is read below,
+  // after the session check, so nobody unauthenticated makes us buffer it.
+  const refused = guardRequest(request, BODY);
+  if (refused) return refused;
+
   const { id } = await context.params;
 
   if (!UUID.test(id)) return NextResponse.json({ message: 'Not found.' }, { status: 404 });
   if (!(await sessionToken())) return NextResponse.json({ message: 'Unauthenticated.' }, { status: 401 });
 
-  const declared = Number(request.headers.get('content-length') ?? 0);
-  if (declared > MAX_BODY) return tooLarge();
-
-  const contentType = request.headers.get('content-type') ?? '';
-  if (!contentType.startsWith('multipart/form-data')) {
-    return NextResponse.json({ message: 'Send the form as multipart.' }, { status: 415 });
-  }
-
-  const raw = await readCapped(request, MAX_BODY);
-  if (raw === null) return tooLarge();
+  const read = await readBody(request, BODY);
+  if (read.response) return read.response;
 
   let incoming;
   try {
-    incoming = await new Response(raw, { headers: { 'content-type': contentType } }).formData();
+    incoming = await new Response(read.body, { headers: { 'content-type': request.headers.get('content-type') } }).formData();
   } catch {
     return NextResponse.json({ message: 'We couldn’t read that form.' }, { status: 400 });
   }

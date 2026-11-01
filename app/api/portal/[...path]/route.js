@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
 import { isAllowed, safePath } from '@/lib/portalProxy';
+import { LIMITS, guardRequest, readBody } from '@/lib/requestGuard';
 import { sessionToken } from '@/lib/session';
 
 /**
@@ -20,6 +21,13 @@ import { sessionToken } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 async function handle(request, context, method) {
+  // Writes only: a cross-origin GET cannot read the answer, and the reads
+  // here change nothing.
+  if (method !== 'GET') {
+    const refused = guardRequest(request, { maxBytes: LIMITS.proxy });
+    if (refused) return refused;
+  }
+
   const { path } = await context.params;
 
   const resolved = safePath(path);
@@ -41,10 +49,26 @@ async function handle(request, context, method) {
 
   let body;
   if (method !== 'GET' && method !== 'DELETE') {
-    body = await request.json().catch(() => null);
+    const read = await readBody(request, { maxBytes: LIMITS.proxy });
+    if (read.response) return read.response;
+    body = read.body;
   }
 
-  const result = await adminFetch(`${resolved}${search}`, { method, body, token });
+  let result;
+  try {
+    result = await adminFetch(`${resolved}${search}`, { method, body, token });
+  } catch (error) {
+    // A timeout or reset on the way to the admin. The admin may have acted
+    // (an approval may have charged), so this is "we do not know", never a
+    // refusal: a named code the screens treat as uncertain, not a bodiless 500.
+    // The path only, never the query or body.
+    console.error(`[portal proxy] admin unreachable on ${method} ${resolved}: ${error?.name ?? 'error'}`);
+
+    return NextResponse.json(
+      { message: 'We could not reach the service, so we do not know whether that went through.', code: 'upstream_unreachable' },
+      { status: 504 }
+    );
+  }
 
   if (result.ok) {
     // `message` rides a success too: the claim-link request answers 202 with

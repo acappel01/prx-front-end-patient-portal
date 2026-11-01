@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { accountError } from '@/lib/accountErrors';
 import { adminFetch } from '@/lib/adminApi';
+import { guardRequest, readBody } from '@/lib/requestGuard';
 import { startSession } from '@/lib/session';
 
 /**
@@ -17,7 +18,12 @@ import { startSession } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
-  const payload = await request.json().catch(() => null);
+  const refused = guardRequest(request);
+  if (refused) return refused;
+
+  const read = await readBody(request);
+  if (read.response) return read.response;
+  const payload = read.body;
   const token = typeof payload?.token === 'string' ? payload.token : '';
   const password = typeof payload?.password === 'string' ? payload.password : '';
 

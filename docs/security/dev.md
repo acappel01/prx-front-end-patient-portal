@@ -76,6 +76,26 @@ control that is guaranteed to fail.
 
 ## Session and transport
 
+- **Every write is origin-checked** (`lib/requestGuard.js`). `SameSite=Strict` does not separate
+  sibling subdomains: `portal.example.com`, the storefront on `example.com` (which runs
+  operator-pasted tags by design) and `admin.example.com` are one site, so a script on any of them
+  can send this portal a credentialed POST. Every non-GET handler under `app/api` calls
+  `guardRequest()` first — the proxy, sign-in and sign-out, the two-step code, the three account
+  routes and the intake upload:
+  - accepted when `Sec-Fetch-Site` is `same-origin`; otherwise `Origin` must equal `PORTAL_URL`'s
+    origin, or the answer is 403 `{code: 'cross_origin'}`. No Origin at all is refused.
+  - a JSON route refuses any Content-Type other than `application/json` with 415, so a CORS
+    "simple" `text/plain` or form post is never parsed. A bodiless POST is fine.
+  - a declared `Content-Length` over the cap is 413 before anything is read: 16 KB for the
+    session, two-step and account routes, 64 KB for the proxy, 42 MB for the multipart intake.
+    Bodies are read only through `readBody()`, which counts bytes as they arrive, so a chunked
+    body with no length hits the same cap. Never call `request.json()` in a handler.
+  - `PORTAL_URL` unset or invalid fails closed: 500 `{code: 'misconfigured'}`, logged once.
+
+  GETs are not checked: a cross-origin read cannot see the answer and no GET here changes
+  anything. Keep it that way — a GET that writes would bypass this.
+- **The proxy allowlist holds only what a screen calls.** Scheduling (slots, appointments) and the
+  video token were removed on 2026-11-01 because no screen used them; re-add each with its screen.
 - `no-store` and `noindex` on every route.
 - Separate root layout from the storefront — this application must not inherit operator script
   injection.
@@ -156,6 +176,15 @@ control that is guaranteed to fail.
 
 ## Payment data
 
+- **Approving a charge retries only on `code: 'error'`** (`lib/approvalOutcome.js`, used by
+  `components/care/ApprovalList.jsx`). That is the one answer where the admin knows nothing was
+  charged, and only it gets a new idempotency key. Anything else unclear — a dropped connection,
+  the proxy's 504 `upstream_unreachable`, a 5xx or 502/504 from the web server with no code, an
+  unknown code — is uncertain: the key is kept (also in this tab's `sessionStorage`, so an approve
+  after a reload replays the same attempt), the screen says the payment may still be processing and
+  offers no button. The proxy never turns an unreachable admin into a bodiless 500. See
+  `approvals/dev.md`.
+
 - The card number never reaches a server. Tokenize in the browser.
 - A single-use checkout token is exchanged for a **durable vault profile** before it is used or
   passed onward; a nonce expires long before a deferred capture.
@@ -179,8 +208,9 @@ sent to an analytics destination, or placed in a URL.
 ## Uploads
 
 The only upload is sending what a held visit needs (`/care/intake/[id]`). It does **not** go through
-the generic proxy: `app/api/intake/[id]/route.js` reads the body with a 42 MB cap (a declared
-`Content-Length` over it is refused before reading), keeps only the named text fields and the four
+the generic proxy: `app/api/intake/[id]/route.js` is origin-checked like every write, requires
+`multipart/form-data`, and reads the body with a 42 MB cap through `readBody()` (a declared
+`Content-Length` over it is refused before reading, and nothing is read before the session check), keeps only the named text fields and the four
 photo fields, refuses any photo that is not JPEG/PNG/WebP or is over 10 MB, renames files to neutral
 names (`id_front.jpg` — a patient's own filename travels nowhere), and sends a freshly built form to
 the admin, which validates everything again (raster types by content, SVG refused). Nothing is

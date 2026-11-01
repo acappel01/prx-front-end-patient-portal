@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
+import { guardRequest, readBody } from '@/lib/requestGuard';
 
 /**
  * "Email me a link" — create an account, or reset a password. No session.
@@ -23,7 +24,12 @@ const ROUTES = {
 };
 
 export async function POST(request) {
-  const payload = await request.json().catch(() => null);
+  const refused = guardRequest(request);
+  if (refused) return refused;
+
+  const read = await readBody(request);
+  if (read.response) return read.response;
+  const payload = read.body;
   const email = typeof payload?.email === 'string' ? payload.email.trim() : '';
   // Own keys only: `constructor` must not resolve to a function and become a path.
   const route = Object.hasOwn(ROUTES, payload?.intent ?? '') ? ROUTES[payload.intent] : null;
