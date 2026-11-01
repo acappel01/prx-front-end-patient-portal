@@ -183,6 +183,12 @@ control that is guaranteed to fail.
   CDN in front and the true client is no longer the rightmost entry: change the extraction and
   the admin's trusted proxies together.
 
+- **One browser header reaches the admin: `Idempotency-Key`** (`lib/idempotencyHeader.js`). The
+  proxy forwards it by name, on writes only, and only when it is a plain token
+  (`^[\x21-\x7E]{8,255}$`); every other browser header stays here. `VitalsForm` mints one key per
+  attempt (a new one after a 422 or a changed value), and the admin answers a repeated key with the
+  first result instead of writing a second reading.
+
 - **The patient can see their own sign-in activity** (Record, `components/account/SecurityHistory.jsx`,
   from `GET /patient/security/events`). It is a server component through `adminFetch`, so it has no
   proxy allowlist entry and no browser path. The admin's resource is a whitelist; this side filters

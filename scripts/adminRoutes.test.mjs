@@ -33,10 +33,10 @@ function admin(handler) {
 
 const json = (body, status = 200, headers = {}) => Response.json(body, { status, headers });
 
-function post(path, body) {
+function post(path, body, extraHeaders = {}) {
   return new Request(`https://portal.example.test${path}`, {
     method: 'POST',
-    headers: { 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' },
+    headers: { 'sec-fetch-site': 'same-origin', 'content-type': 'application/json', ...extraHeaders },
     body: JSON.stringify(body),
   });
 }
@@ -224,5 +224,28 @@ describe('portal proxy (P-04, P-17)', () => {
 
     assert.equal(response.status, 504);
     assert.equal((await response.json()).code, 'upstream_unreachable');
+  });
+
+  it('passes a plain Idempotency-Key on and no other browser header', async () => {
+    await startSession('tok');
+    admin(() => json({ data: { id: 1 } }, 201));
+
+    await proxyRoute.POST(
+      post('/api/portal/patient/vitals', { weight_lbs: 180 }, { 'idempotency-key': 'a1b2c3d4-0000-4000-8000-000000000001', 'x-forwarded-host': 'evil.test' }),
+      context(['patient', 'vitals'])
+    );
+
+    const sent = calls.at(-1).init.headers;
+    assert.equal(sent['Idempotency-Key'], 'a1b2c3d4-0000-4000-8000-000000000001');
+    assert.equal(sent['x-forwarded-host'], undefined);
+  });
+
+  it('drops an Idempotency-Key that is not a plain token', async () => {
+    await startSession('tok');
+    admin(() => json({ data: { id: 1 } }, 201));
+
+    await proxyRoute.POST(post('/api/portal/patient/vitals', { weight_lbs: 180 }, { 'idempotency-key': 'short' }), context(['patient', 'vitals']));
+
+    assert.equal(calls.at(-1).init.headers['Idempotency-Key'], undefined);
   });
 });

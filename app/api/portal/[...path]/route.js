@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
+import { idempotencyKeyFrom } from '@/lib/idempotencyHeader';
 import { isAllowed, safePath } from '@/lib/portalProxy';
 import { rateLimitReply } from '@/lib/rateLimit';
 import { LIMITS, guardRequest, readBody } from '@/lib/requestGuard';
@@ -55,7 +56,11 @@ async function handle(request, context, method) {
     body = read.body;
   }
 
-  const result = await adminFetch(`${resolved}${search}`, { method, body, token });
+  // The only browser header passed on: a clinical write's Idempotency-Key, by
+  // name, and only when it is a plain token.
+  const idempotencyKey = method === 'GET' ? null : idempotencyKeyFrom(request.headers);
+
+  const result = await adminFetch(`${resolved}${search}`, { method, body, token, idempotencyKey });
 
   if (result.status === 0) {
     // A timeout or reset on the way to the admin (adminFetch logged the path).
