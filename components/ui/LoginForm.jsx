@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { apiCall } from '@/lib/portalClient';
 
 /**
  * Sign in.
@@ -27,29 +28,23 @@ export default function LoginForm({ stayOnPage = false }) {
 
     const form = new FormData(event.currentTarget);
 
-    const response = await fetch('/api/session', {
+    // Anonymous: a 401 here is "those details did not match", shown below.
+    const response = await apiCall('/api/session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: form.get('email'),
-        password: form.get('password'),
-      }),
-    }).catch(() => null);
+      body: { email: form.get('email'), password: form.get('password') },
+      signedIn: false,
+    });
 
-    if (!response?.ok) {
-      const payload = await response?.json().catch(() => null);
-
-      setError(payload?.message ?? 'Something went wrong. Please try again.');
-      setReference(payload?.request_id ?? null);
+    if (!response.ok) {
+      setError(response.message ?? 'Something went wrong. Please try again.');
+      setReference(response.requestId);
       setBusy(false);
 
       return;
     }
 
-    const payload = await response.json().catch(() => null);
-
     // Two-step verification: the challenge is already in an httpOnly cookie.
-    if (payload?.data?.two_factor) {
+    if (response.data?.two_factor) {
       window.location.assign('/login/verify');
 
       return;
@@ -68,7 +63,7 @@ export default function LoginForm({ stayOnPage = false }) {
     if (stayOnPage) {
       window.location.reload();
     } else {
-      window.location.assign(payload?.data?.next ?? '/');
+      window.location.assign(response.data?.next ?? '/');
     }
   }
 

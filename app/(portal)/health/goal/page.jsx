@@ -1,8 +1,10 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import GoalForm from '@/components/health/GoalForm';
 import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
+import { guard } from '@/lib/screenGuards';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,10 +15,10 @@ export const dynamic = 'force-dynamic';
  * care team sees the same number and Home's progress is measured against it.
  */
 export default async function GoalPage() {
-  const { ok, status, data, code, requestId } = await adminFetch('/patient/vitals/goals');
+  const result = await adminFetch('/patient/vitals/goals');
+  const { ok, status, data, code, requestId } = result;
 
-  if (status === 401) redirect('/login');
-  if (status === 403 && code === 'two_factor_setup_required') redirect('/record/security?required=1');
+  if (guard(result)) redirect('/login');
 
   if (status === 409 && code === 'no_linked_chart') {
     return (
@@ -45,7 +47,7 @@ export default async function GoalPage() {
   return (
     <>
       <p className="prx-back">
-        <a href="/">← Home</a>
+        <Link href="/">← Home</Link>
       </p>
       <h1>Your weight goal</h1>
       <GoalForm current={data} />

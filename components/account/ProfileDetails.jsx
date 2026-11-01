@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { adminFetch } from '@/lib/adminApi';
 
 /**
@@ -51,7 +52,7 @@ export default async function ProfileDetails() {
         ))}
       </dl>
       <p className="prx-security__note prx-muted">
-        Something wrong? <a href="/talk">Message your care team</a> and they&rsquo;ll update your record.
+        Something wrong? <Link href="/talk">Message your care team</Link> and they&rsquo;ll update your record.
       </p>
     </section>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
@@ -38,6 +39,7 @@ export default function ApprovalList({ items, card }) {
   );
 }
 
+/** @param {{ item: import('@/lib/models').Approval, card: { card_brand: string, last_four: string } | null }} props */
 function ApprovalItem({ item, card }) {
   const [stage, setStage] = useState('idle'); // idle | confirm | busy | done
   const [result, setResult] = useState(null);
@@ -110,7 +112,7 @@ function ApprovalItem({ item, card }) {
           <button type="button" className="prx-link" onClick={() => decide('decline')}>
             Decline
           </button>
-          {!card ? <p className="prx-muted">There is no card on file to charge. <a href="/talk">Message your care team</a> to add one.</p> : null}
+          {!card ? <p className="prx-muted">There is no card on file to charge. <Link href="/talk">Message your care team</Link> to add one.</p> : null}
         </div>
       ) : null}
 

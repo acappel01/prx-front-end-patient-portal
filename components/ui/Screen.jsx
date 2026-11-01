@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
-
+import Link from 'next/link';
 import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
+import { guard } from '@/lib/screenGuards';
 
 /**
  * Shared shape for a read-only screen: fetch, then render one of three states.
@@ -10,15 +10,22 @@ import { adminFetch } from '@/lib/adminApi';
  * rather than copy-pasted into five screens where one of them will eventually
  * be missed and throw a 500 onto a clinical page.
  */
+/**
+ * @param {object} props
+ * @param {string} props.title
+ * @param {string} props.path the admin path to read
+ * @param {import('react').ReactNode} props.empty what to say when there are no rows
+ * @param {{ href: string, label: string }} [props.emptyAction] the way forward from an empty screen
+ * @param {{ href: string, label: string }} [props.action] the way forward when there are rows
+ * @param {(data: any) => any[]} [props.rowsOf] picks the rows out of a screen-shaped payload
+ * @param {(rows: any[], data: any) => import('react').ReactNode} props.children
+ */
 export default async function Screen({ title, path, empty, emptyAction, action, rowsOf, children }) {
-  const { ok, status, data, code, requestId } = await adminFetch(path);
+  const result = await adminFetch(path);
+  const { ok, status, data, code, requestId } = result;
 
-  // The install requires two-step verification and this account lacks it.
-  if (status === 403 && code === 'two_factor_setup_required') {
-    redirect('/record/security?required=1');
-  }
-
-  if (status === 401) {
+  // Two-step setup required: redirected. A 401: the session expired.
+  if (guard(result)) {
     return (
       <>
         <h1>{title}</h1>
@@ -52,7 +59,7 @@ export default async function Screen({ title, path, empty, emptyAction, action, 
       <>
         <h1>{title}</h1>
         <p className="prx-muted">
-          Your care team keeps this up to date. <a href="/talk">Message them</a> if something has changed.
+          Your care team keeps this up to date. <Link href="/talk">Message them</Link> if something has changed.
         </p>
       </>
     );

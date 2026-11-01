@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { apiCall } from '@/lib/portalClient';
 import { deadlinesFrom, sessionPhase } from '@/lib/sessionClock';
 
 /**
@@ -57,12 +58,13 @@ export default function SessionTimeout() {
 
   // `expired` only when a limit ran out: the sign-in page then says why the
   // patient was signed out, which is wrong after a deliberate tap.
-  const endSession = useCallback(async ({ expired = 'idle' } = {}) => {
+  const endSession = useCallback(async (/** @type {{ expired?: string | false | null }} */ { expired = 'idle' } = {}) => {
     if (ending.current) return;
     ending.current = true;
 
     // Clears the cookie; the admin token is already gone or about to be.
-    await fetch('/api/session', { method: 'DELETE' }).catch(() => null);
+    // `signedIn: false`: this decides where to land itself.
+    await apiCall('/api/session', { method: 'DELETE', signedIn: false });
     window.location.assign(expired === 'absolute' ? '/login?expired=limit' : expired ? '/login?expired=1' : '/login');
   }, []);
 
@@ -90,19 +92,20 @@ export default function SessionTimeout() {
     keepAliveInFlight.current = true;
     lastAttempt.current = Date.now();
 
-    const response = await fetch('/api/session', { cache: 'no-store' }).catch(() => null);
-    const payload = response?.ok ? await response.json().catch(() => null) : null;
+    // `signedIn: false`: a 401 ends the session here, with its own landing, and
+    // this runs on the two-step setup page too, so it must never redirect there.
+    const response = await apiCall('/api/session', { signedIn: false });
     keepAliveInFlight.current = false;
 
-    if (response?.status === 401) {
+    if (response.status === 401) {
       await endSession();
 
       return false;
     }
 
-    if (response?.ok) {
+    if (response.ok) {
       lastServerUse.current = Date.now();
-      deadlines.current = deadlinesFrom(payload?.data, Date.now()) ?? deadlines.current;
+      deadlines.current = deadlinesFrom(response.data, Date.now()) ?? deadlines.current;
       setUnreachable(false);
       check();
     } else {
@@ -111,7 +114,7 @@ export default function SessionTimeout() {
       setUnreachable(true);
     }
 
-    return Boolean(response?.ok);
+    return response.ok;
   }, [endSession, check]);
 
   // Learn the deadlines once. The server render that mounted this already

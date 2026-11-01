@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { portalCall } from '@/lib/portalClient';
+
 /**
  * Ask the admin to email a link that connects this account's record.
  *
@@ -24,34 +26,25 @@ export default function RequestClaimLink() {
     inFlight.current = true;
     setState({ phase: 'sending', message: null });
 
-    const response = await fetch('/api/portal/patient/claim-links', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-    }).catch(() => null);
-
-    const payload = await response?.json().catch(() => null);
+    const response = await portalCall('/patient/claim-links', { method: 'POST', body: {} });
 
     inFlight.current = false;
 
-    if (response?.status === 202) {
-      setState({ phase: 'sent', message: payload?.message ?? null });
+    if (response.status === 202) {
+      setState({ phase: 'sent', message: response.message });
 
       return;
     }
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
-
-      return;
-    }
+    // Signing in again (portalCall has navigated away).
+    if (response.status === 401) return;
 
     setState({
       phase: 'failed',
       message:
-        response?.status === 429
+        response.status === 429
           ? 'You have asked for several links recently. Check your inbox, or try again later.'
-          : (payload?.message ?? 'We could not send the link. Please try again in a moment.'),
+          : (response.message ?? 'We could not send the link. Please try again in a moment.'),
     });
   }
 

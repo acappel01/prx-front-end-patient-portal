@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { apiCall } from '@/lib/portalClient';
 
 /**
  * The form for what a held visit still needs, built from the provider's items.
@@ -49,7 +51,7 @@ const FIELD_INPUTS = {
 export default function ProvideInformationForm({ encounterId, items }) {
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState(null);
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [reference, setReference] = useState(null);
 
   // The "Saved" banner rides on ?saved=1 for one render; drop it from the URL so
@@ -78,19 +80,16 @@ export default function ProvideInformationForm({ encounterId, items }) {
 
     const form = new FormData(event.currentTarget);
 
-    const response = await fetch(`/api/intake/${encounterId}`, { method: 'POST', body: form }).catch(() => null);
-    const payload = await response?.json().catch(() => null);
+    // FormData goes as multipart; the browser sets the boundary.
+    const response = await apiCall(`/api/intake/${encounterId}`, { method: 'POST', body: form });
 
     setBusy(false);
 
-    if (response?.status === 401) {
-      window.location.assign('/login');
+    // Signing in again (apiCall has navigated away).
+    if (response.status === 401) return;
 
-      return;
-    }
-
-    if (response?.ok) {
-      if (payload?.data?.released) {
+    if (response.ok) {
+      if (response.data?.released) {
         setOutcome('released');
       } else {
         // Saved; show what is left by reloading the requirements.
@@ -100,22 +99,23 @@ export default function ProvideInformationForm({ encounterId, items }) {
       return;
     }
 
-    if (response?.status === 409) {
+    if (response.status === 409) {
       setOutcome('not-waiting');
 
       return;
     }
 
-    if (response?.status === 422 || response?.status === 413) {
+    if (response.status === 422 || response.status === 413) {
       // An error for a field this form renders goes beside it; anything else
       // (e.g. "add at least one item") goes to the form banner, never nowhere.
       const known = new Set(
         [...photos.map((item) => PHOTO_SLUGS[item.slug]), ...inputs.flatMap((item) => FIELD_INPUTS[item.slug].map((spec) => spec.name))]
       );
+      /** @type {Record<string, string>} */
       const mapped = {};
       const loose = [];
 
-      for (const [rawName, messages] of Object.entries(payload?.errors ?? {})) {
+      for (const [rawName, messages] of Object.entries(response.errors ?? {})) {
         const name = rawName === 'id_upload' ? 'id_front' : rawName;
         const text = Array.isArray(messages) ? messages[0] : String(messages);
 
@@ -124,7 +124,7 @@ export default function ProvideInformationForm({ encounterId, items }) {
       }
 
       if (loose.length > 0 || Object.keys(mapped).length === 0) {
-        mapped.form = loose.length > 0 ? loose.join(' ') : (payload?.message ?? 'Please check what you entered.');
+        mapped.form = loose.length > 0 ? loose.join(' ') : (response.message ?? 'Please check what you entered.');
       }
 
       setErrors(mapped);
@@ -132,7 +132,7 @@ export default function ProvideInformationForm({ encounterId, items }) {
       return;
     }
 
-    setReference(payload?.request_id ?? null);
+    setReference(response.requestId);
     setErrors({ form: 'We couldn’t send that. Please try again — sending again won’t create duplicates.' });
   }
 
@@ -142,9 +142,9 @@ export default function ProvideInformationForm({ encounterId, items }) {
         <h2>Sent — thank you</h2>
         <p className="prx-muted">Everything your visit needed is in. Your provider can now review it.</p>
         <p>
-          <a className="prx-task__cta" href="/">
+          <Link className="prx-task__cta" href="/">
             Back to your care
-          </a>
+          </Link>
         </p>
       </div>
     );
@@ -156,9 +156,9 @@ export default function ProvideInformationForm({ encounterId, items }) {
         <h2>This visit isn&rsquo;t waiting on you any more</h2>
         <p className="prx-muted">Your care team has already picked it up.</p>
         <p>
-          <a className="prx-task__cta" href="/">
+          <Link className="prx-task__cta" href="/">
             Back to your care
-          </a>
+          </Link>
         </p>
       </div>
     );
@@ -237,9 +237,9 @@ export default function ProvideInformationForm({ encounterId, items }) {
           {busy ? 'Sending…' : 'Send'}
         </button>
       ) : (
-        <a className="prx-task__cta" href="/talk">
+        <Link className="prx-task__cta" href="/talk">
           Message your care team
-        </a>
+        </Link>
       )}
     </form>
   );

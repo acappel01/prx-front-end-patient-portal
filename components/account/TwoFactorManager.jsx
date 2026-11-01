@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { portalCall } from '@/lib/portalClient';
+
 /**
  * Set up, replace, get new recovery codes for, or turn off two-step verification.
  *
@@ -12,24 +14,13 @@ import { useRef, useState } from 'react';
  * them, and a reload loses them for good.
  */
 
+/** One two-step step through the proxy; `message` is the first field error, else the admin's sentence. */
 async function call(path, body) {
-  const response = await fetch(`/api/portal/patient/two-factor/${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body ?? {}),
-  }).catch(() => null);
-
-  const payload = await response?.json().catch(() => null);
-
-  if (response?.status === 401) {
-    window.location.assign('/login');
-  }
+  const response = await portalCall(`/patient/two-factor/${path}`, { method: 'POST', body: body ?? {} });
 
   return {
-    ok: Boolean(response?.ok),
-    status: response?.status ?? 0,
-    data: payload?.data ?? null,
-    message: payload?.errors ? Object.values(payload.errors).flat()[0] : (payload?.message ?? null),
+    ...response,
+    message: response.errors ? Object.values(response.errors).flat()[0] : response.message,
   };
 }
 

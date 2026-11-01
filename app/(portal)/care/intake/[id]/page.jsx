@@ -1,12 +1,13 @@
+import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import ProvideInformationForm from '@/components/care/ProvideInformationForm';
 import Reference from '@/components/ui/Reference';
 import { adminFetch } from '@/lib/adminApi';
+import { isUuid } from '@/lib/ids';
+import { guard } from '@/lib/screenGuards';
 
 export const dynamic = 'force-dynamic';
-
-const UUID = /^[0-9a-fA-F-]{36}$/;
 
 /**
  * What a held visit still needs from the patient — and a way to send it.
@@ -22,12 +23,12 @@ export default async function IntakePage({ params, searchParams }) {
   const { id } = await params;
   const saved = (await searchParams)?.saved === '1';
 
-  if (!UUID.test(id)) notFound();
+  if (!isUuid(id)) notFound();
 
-  const { ok, status, data, code, requestId } = await adminFetch(`/patient/encounters/${id}/requirements`);
+  const result = await adminFetch(`/patient/encounters/${id}/requirements`);
+  const { ok, status, data, requestId } = result;
 
-  if (status === 401) redirect('/login');
-  if (status === 403 && code === 'two_factor_setup_required') redirect('/record/security?required=1');
+  if (guard(result)) redirect('/login');
 
   const allSatisfied = ok && (data?.items ?? []).every((item) => item.satisfied);
   // The provider writes its message once and never clears it, so it only means
@@ -43,9 +44,9 @@ export default async function IntakePage({ params, searchParams }) {
         <h1>Your provider needs more information</h1>
         <p className="prx-task__body">{data.info_request_message}</p>
         <p>
-          <a className="prx-task__cta" href="/talk">
+          <Link className="prx-task__cta" href="/talk">
             Message your care team
-          </a>
+          </Link>
         </p>
       </>
     );
@@ -58,7 +59,7 @@ export default async function IntakePage({ params, searchParams }) {
         <h1>Nothing outstanding</h1>
         <p className="prx-stack__clear">There is nothing left to send for this visit.</p>
         <p>
-          <a href="/">Back to your care</a>
+          <Link href="/">Back to your care</Link>
         </p>
       </>
     );
@@ -114,9 +115,9 @@ export default async function IntakePage({ params, searchParams }) {
           <p className="prx-muted">
             Your care team will let you know how to send these. If you have them ready, send them a message.
           </p>
-          <a className="prx-task__cta" href="/talk">
+          <Link className="prx-task__cta" href="/talk">
             Message your care team
-          </a>
+          </Link>
         </section>
       )}
     </>

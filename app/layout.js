@@ -51,7 +51,7 @@ export default async function RootLayout({ children }) {
   warnIfImageBlocked(favicon, 'favicon');
 
   return (
-    <html lang="en" style={{ cssText: undefined }} data-app="portal" data-template={config?.theme?.frontend_template ?? 'default'}>
+    <html lang="en" data-app="portal" data-template={config?.theme?.frontend_template ?? 'default'}>
       <head>
         {fonts ? <link rel="stylesheet" href={fonts} /> : null}
         {favicon ? <link rel="icon" href={favicon} /> : null}

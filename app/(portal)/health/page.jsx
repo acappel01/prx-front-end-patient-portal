@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import TrendChart from '@/components/charts/TrendChart';
@@ -226,7 +227,7 @@ export default async function HealthPage({ searchParams }) {
           <h2 className="prx-section-title">Lab results</h2>
           <ul className="prx-rows prx-record-links">
             <li className="prx-row">
-              <a href="/health/labs">Your lab results, each value charted over time</a>
+              <Link href="/health/labs">Your lab results, each value charted over time</Link>
             </li>
           </ul>
         </>

@@ -35,22 +35,26 @@ const LIMIT = 10;
 function describeDevice(userAgent) {
   if (!userAgent) return null;
 
-  const browser = [
+  /** @type {[RegExp, string][]} */
+  const browsers = [
     [/Edg\//, 'Edge'],
     [/OPR\/|Opera/, 'Opera'],
     [/Firefox\/|FxiOS/, 'Firefox'],
     [/Chrome\/|CriOS/, 'Chrome'],
     [/Safari\//, 'Safari'],
-  ].find(([pattern]) => pattern.test(userAgent))?.[1];
+  ];
+  const browser = browsers.find(([pattern]) => pattern.test(userAgent))?.[1];
 
-  const system = [
+  /** @type {[RegExp, string][]} */
+  const systems = [
     [/iPhone/, 'iPhone'],
     [/iPad/, 'iPad'],
     [/Android/, 'Android'],
     [/Macintosh|Mac OS X/, 'Mac'],
     [/Windows/, 'Windows'],
     [/Linux/, 'Linux'],
-  ].find(([pattern]) => pattern.test(userAgent))?.[1];
+  ];
+  const system = systems.find(([pattern]) => pattern.test(userAgent))?.[1];
 
   if (browser && system) return `${browser} on ${system}`;
 

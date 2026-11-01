@@ -16,7 +16,18 @@ cp .env.example .env      # fill in ADMIN_API_BASE_URL, SESSION_SECRET and PORTA
 npm ci
 npm run dev
 npm test                  # node --test over scripts/*.test.mjs
+npm run lint              # ESLint, next/core-web-vitals (.eslintrc.json), no warnings allowed
+npm run typecheck         # tsc -p jsconfig.json: checkJs over app, components, lib (types in lib/models.js)
 ```
+
+CI (`.github/workflows/ci.yml`) runs `npm ci`, lint, typecheck, test and `npm run build` on every
+push and pull request, with no env and no admin. The build needs no env; the server does.
+
+**The server checks its env when it starts** (`instrumentation.js` → `lib/env.js`). In production a
+missing or malformed required variable stops `next start` with exit code 1 and one `[env]` line per
+problem (never the value): `ADMIN_API_BASE_URL` must be an http(s) URL ending in `/api/v1`,
+`SESSION_SECRET` at least 32 bytes, `PORTAL_URL` an http(s) origin. `next dev` only warns.
+`next build` and the tests skip the check.
 
 `ADMIN_API_BASE_URL` is the **admin's** origin plus `/api/v1` (for example
 `https://admin.example.com/api/v1`), never the storefront's. The storefront's proxy passes
@@ -26,9 +37,9 @@ account call with anything unexpected, the portal logs `[account] admin answered
 on <route>` (no address, token or password); check the service log (`journalctl -u <service>`)
 for it first.
 
-`SESSION_SECRET` has no default and the app refuses to issue a session without one. That is
-deliberate — an unset secret silently degrading to an unsigned cookie is a control that looks
-present and is absent in production.
+`SESSION_SECRET` has no default, must be at least 32 bytes, and the app refuses to start (and to
+issue a session) without one. That is deliberate — an unset secret silently degrading to an
+unsigned cookie is a control that looks present and is absent in production.
 
 `PORTAL_URL` is required for the same reason. It is the `Origin` every write must come from
 (`lib/requestGuard.js`, see `security/dev.md` → Cross-origin writes). Set it to the exact origin the
@@ -40,7 +51,7 @@ configured…` once. Pages still render.
 | Variable | Required | What it is |
 |---|---|---|
 | `ADMIN_API_BASE_URL` | Yes | The admin's origin plus `/api/v1`. Server-side only; there is no `NEXT_PUBLIC_` variant. |
-| `SESSION_SECRET` | Yes | Signs the session cookie. `openssl rand -hex 32`. |
+| `SESSION_SECRET` | Yes | Signs the session cookie. At least 32 bytes: `openssl rand -hex 32`. |
 | `ADMIN_API_TOKEN` | When the admin's **Require tokens** is on for **Public read** | An API client token from the admin (**Users & access > API clients**) with **Public read**, sent only on the anonymous `/config` read so the brand loads. Patient calls carry the patient's own session token instead. |
 | `PORTAL_URL` | Yes | This app's public origin, the only `Origin` a write is accepted from when the browser does not send `Sec-Fetch-Site: same-origin`. Same value as the admin's `PATIENT_PORTAL_URL`. |
 | `CSP_IMG_SRC`, `CSP_CONNECT_SRC`, `CSP_SCRIPT_SRC`, `CSP_STYLE_SRC`, `CSP_FONT_SRC`, `CSP_FRAME_SRC`, `CSP_MEDIA_SRC`, `CSP_WORKER_SRC` | No | Extra sources for that Content-Security-Policy directive, space-separated hosts or schemes (`lib/securityHeaders.js`). The usual one is `CSP_IMG_SRC` when brand uploads are served from a storage or CDN host rather than the admin. |
@@ -67,9 +78,12 @@ as `X-Forwarded-For`, is the one the admin records and rate-limits on.
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
 | `app/api/export/[id]/` | Streams a ready copy of the record from the admin (`/patient/export/{id}/download`). Not a JSON relay, so outside the proxy. |
-| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (browser calls through the proxy), `approvalOutcome` (what an approval answer means), `securityHeaders` (the CSP, HSTS and Permissions-Policy), `signInRefusal` (what a failed sign-in says), `rateLimit` (the 429 sentence and `Retry-After`), `exportPoll` (the record-copy poll's backoff), `sessionClock` (the session's idle and absolute deadlines), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
+| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (every browser call: `portalCall` through the proxy, `apiCall` for this app's own routes), `screenGuards` (`guard()`, the two-step redirect and 401 check every server screen makes), `ids` (`isUuid`, the one id check before a path), `models` (JSDoc types for the admin payloads), `env` (the startup env check), `approvalOutcome` (what an approval answer means), `securityHeaders` (the CSP, HSTS and Permissions-Policy), `signInRefusal` (what a failed sign-in says), `rateLimit` (the 429 sentence and `Retry-After`), `exportPoll` (the record-copy poll's backoff), `sessionClock` (the session's idle and absolute deadlines), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
 | `scripts/*.test.mjs` | Unit tests (`npm test`, Node's built-in runner, no dependencies). The pure helpers are imported directly; `adminRoutes.test.mjs` runs route handlers and `adminApi` against a stubbed admin, with `scripts/support/hooks.mjs` resolving `@/` and stubbing `server-only`, `next/headers` and `next/server`. |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
+| `instrumentation.js` | Runs once at server start: the env check (`lib/env.js`). |
+| `types/modules.d.ts` | Declarations the type check needs (`server-only`, `.scss`, Next's globals). |
+| `.github/workflows/ci.yml` | CI: lint, typecheck, test, build. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |
 
 ## The request paths
@@ -83,6 +97,14 @@ list working.
 
 Adding an entry has one precondition: the admin must pin every identifier in that path to the
 session's own record. If it forwards a caller-supplied id, fix the admin first.
+
+**Every browser call goes through `lib/portalClient.js`**: `portalCall(path, options)` for the
+proxy, `apiCall(url, options)` for this app's own routes. Never call `fetch` in a component. It
+decides once what a 401 means (sign in again by default; `onUnauthenticated: 'reload'` or `'none'`
+where a screen handles it itself; `signedIn: false` for the anonymous sign-in and account routes,
+which never navigate), sends a `required` two-step session to setup, never throws (`status: 0` is
+"no answer"), and returns `{ ok, status, data, meta, message, errors, code, requestId, retryAfter,
+payload }`.
 
 **Two dedicated routes sit outside that proxy** because they are not JSON relays: `app/api/session/*`
 (sign-in, two-step code, keep-alive — they set cookies) and `app/api/intake/[id]` (the multipart
@@ -104,5 +126,11 @@ reads is storing PHI, so the available performance lever is fan-out reduction, n
 3. Handle four states — 401 as re-authentication, `409 {code: "no_linked_chart"}` as "connect your
    record" (an account with no medical record yet; key on the code, since the provider's own
    conflicts are 409s too), a failure as a calm empty state, and success.
-   `components/ui/Screen.jsx` does all four; use it unless the screen genuinely differs.
-4. An empty state asks for the thing that would fill it. It never reports its own absence.
+   `components/ui/Screen.jsx` does all four; use it unless the screen genuinely differs. A screen
+   that cannot use it calls `guard(result)` (`lib/screenGuards.js`) first, which redirects a
+   `required` two-step session and returns true on a 401, and checks a path id with `isUuid()`
+   (`lib/ids.js`).
+5. Type what it reads: add or extend the payload's `@typedef` in `lib/models.js` (it names the
+   admin Resource or controller it mirrors) and annotate the component, so `npm run typecheck`
+   catches a field the admin does not send.
+6. An empty state asks for the thing that would fill it. It never reports its own absence.

@@ -79,7 +79,11 @@ external refund or void, and re-pointing an authorization reference); see
 cp .env.example .env      # ADMIN_API_BASE_URL (the admin, plus /api/v1), SESSION_SECRET and PORTAL_URL (this app's origin)
 npm ci
 npm run dev
+npm test && npm run lint && npm run typecheck
 ```
+
+In production the server refuses to start when a required variable is missing or malformed
+(`instrumentation.js`); CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the build.
 
 Every variable, and what the admin needs set to match, is in
 [`docs/getting-started/dev.md`](docs/getting-started/dev.md). For production, `npm run build` then

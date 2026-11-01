@@ -28,6 +28,7 @@ const PATHS = {
 };
 
 /** Decorative by default: the label next to it is what a screen reader reads. */
+/** @param {{ name: string, size?: number, className?: string }} props */
 export default function Icon({ name, size = 24, className }) {
   const paths = PATHS[name];
 

@@ -2,6 +2,8 @@
 
 import { useRef, useState } from 'react';
 
+import { portalCall } from '@/lib/portalClient';
+
 /**
  * Use a claim link: one button, one POST.
  *
@@ -27,14 +29,16 @@ export default function ClaimRecordForm({ token }) {
     setBusy(true);
     setError(null);
 
-    const response = await fetch('/api/portal/patient/claim', {
+    // A 401 means the session ended between rendering and pressing: re-render
+    // this page, which asks them to sign in and keeps the link usable.
+    const response = await portalCall('/patient/claim', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      body: { token },
       referrerPolicy: 'no-referrer',
-      body: JSON.stringify({ token }),
-    }).catch(() => null);
+      onUnauthenticated: 'reload',
+    });
 
-    if (response?.ok) {
+    if (response.ok) {
       // Full navigation, not a soft push: Home resolves the link server-side
       // and a cached RSC payload from a moment ago still says "not connected".
       window.location.assign('/');
@@ -42,21 +46,13 @@ export default function ClaimRecordForm({ token }) {
       return;
     }
 
-    if (response?.status === 401) {
-      // The session ended between rendering and pressing. Re-render this page,
-      // which asks them to sign in and keeps the link usable.
-      window.location.reload();
-
-      return;
-    }
-
-    const payload = await response?.json().catch(() => null);
+    if (response.status === 401) return;
 
     // The admin gives one sentence for unknown, used, expired and not-yours,
     // on purpose. Show it as sent; do not try to interpret it.
     setError(
-      payload?.errors?.token?.[0] ??
-        payload?.message ??
+      response.errors?.token?.[0] ??
+        response.message ??
         'We could not connect your record. Please try again in a moment.'
     );
     setBusy(false);

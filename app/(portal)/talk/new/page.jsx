@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import StartConversation from '@/components/talk/StartConversation';
 import Screen from '@/components/ui/Screen';
 
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default function NewConversationPage() {
   return (
     <>
-      <p className="prx-back"><a href="/talk">← Conversations</a></p>
+      <p className="prx-back"><Link href="/talk">← Conversations</Link></p>
       <Screen title="Message your care team" path="/patient/encounters" empty="There are no visits to message about yet.">
         {(rows) => <StartConversation encounters={rows} />}
       </Screen>

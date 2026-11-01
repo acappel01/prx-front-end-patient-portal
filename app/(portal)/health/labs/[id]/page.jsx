@@ -4,11 +4,10 @@ import LabFlag from '@/components/labs/LabFlag';
 import BackLink from '@/components/ui/BackLink';
 import LocalTime from '@/components/ui/LocalTime';
 import Screen from '@/components/ui/Screen';
+import { isUuid } from '@/lib/ids';
 import { formatValue, rangeText } from '@/lib/labs';
 
 export const dynamic = 'force-dynamic';
-
-const UUID = /^[0-9a-fA-F-]{36}$/;
 
 /**
  * One lab order: each test and its values, with the range and any note the
@@ -18,7 +17,7 @@ const UUID = /^[0-9a-fA-F-]{36}$/;
 export default async function LabOrderPage({ params }) {
   const { id } = await params;
 
-  if (!UUID.test(id)) notFound();
+  if (!isUuid(id)) notFound();
 
   return (
     <>
