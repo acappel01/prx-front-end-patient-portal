@@ -43,6 +43,8 @@ configured…` once. Pages still render.
 | `SESSION_SECRET` | Yes | Signs the session cookie. `openssl rand -hex 32`. |
 | `ADMIN_API_TOKEN` | When the admin's **Require tokens** is on for **Public read** | An API client token from the admin (**Users & access > API clients**) with **Public read**, sent only on the anonymous `/config` read so the brand loads. Patient calls carry the patient's own session token instead. |
 | `PORTAL_URL` | Yes | This app's public origin, the only `Origin` a write is accepted from when the browser does not send `Sec-Fetch-Site: same-origin`. Same value as the admin's `PATIENT_PORTAL_URL`. |
+| `CSP_IMG_SRC`, `CSP_CONNECT_SRC`, `CSP_SCRIPT_SRC`, `CSP_STYLE_SRC`, `CSP_FONT_SRC`, `CSP_FRAME_SRC`, `CSP_MEDIA_SRC`, `CSP_WORKER_SRC` | No | Extra sources for that Content-Security-Policy directive, space-separated hosts or schemes (`lib/securityHeaders.js`). The usual one is `CSP_IMG_SRC` when brand uploads are served from a storage or CDN host rather than the admin. |
+| `PERMISSIONS_ALLOW` | No | Device features this origin may use, e.g. `camera microphone` (for a future video visit). Unset, camera, microphone and geolocation are off. |
 
 On the admin, `PATIENT_PORTAL_URL` must be this app's origin (account, reset and claim emails link
 here), and `TRUSTED_PROXIES` must name this host so the patient's address, which this app forwards
@@ -59,12 +61,13 @@ as `X-Forwarded-For`, is the one the admin records and rate-limits on.
 | `app/register/`, `app/forgot/` | Anonymous. Email-only forms that ask the admin to email a link. No account is created here. |
 | `app/create-account/[token]/`, `app/reset/[token]/` | Anonymous. Land the emailed links; a password form, token spent only on submit. |
 | `app/api/account/{link,create,reset}/` | The three anonymous account calls. Outside the proxy, which needs a session. |
-| `app/fonts/` | The admin's brand fonts, relayed so no patient page loads from Google (`lib/fonts.js`). |
+| `app/fonts/` | The admin's brand fonts, relayed so no patient page loads from Google (`lib/fonts.js`). Only the files the brand's stylesheet names. |
+| `middleware.js` | Security headers only (CSP with a per-request nonce, HSTS, Permissions-Policy; `lib/securityHeaders.js`). Never a session check. |
 | `app/api/session/` | Sign in and out. Exchanges a credential for an admin token server-side. |
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
 | `app/api/export/[id]/` | Streams a ready copy of the record from the admin (`/patient/export/{id}/download`). Not a JSON relay, so outside the proxy. |
-| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (browser calls through the proxy), `approvalOutcome` (what an approval answer means), `signInRefusal` (what a failed sign-in says), `rateLimit` (the 429 sentence and `Retry-After`), `exportPoll` (the record-copy poll's backoff), `sessionClock` (the session's idle and absolute deadlines), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
+| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (browser calls through the proxy), `approvalOutcome` (what an approval answer means), `securityHeaders` (the CSP, HSTS and Permissions-Policy), `signInRefusal` (what a failed sign-in says), `rateLimit` (the 429 sentence and `Retry-After`), `exportPoll` (the record-copy poll's backoff), `sessionClock` (the session's idle and absolute deadlines), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
 | `scripts/*.test.mjs` | Unit tests (`npm test`, Node's built-in runner, no dependencies). The pure helpers are imported directly; `adminRoutes.test.mjs` runs route handlers and `adminApi` against a stubbed admin, with `scripts/support/hooks.mjs` resolving `@/` and stubbing `server-only`, `next/headers` and `next/server`. |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |

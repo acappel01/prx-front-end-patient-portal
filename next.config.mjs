@@ -10,18 +10,30 @@ const nextConfig = {
   // the few anonymous pages (sign in, register, forgot, and the emailed-link
   // pages) are per-visitor forms, and a patient's view must never be served to
   // another request.
+  //
+  // Content-Security-Policy, Strict-Transport-Security and Permissions-Policy
+  // are NOT here: they are set per request by middleware.js, because the CSP
+  // carries a fresh nonce and reads the deployment's env (lib/securityHeaders.js),
+  // and this function is evaluated once, at build time.
   async headers() {
     return [
       {
         source: '/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, private, max-age=0' },
           { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet' },
           // Every authenticated URL here can carry an identifier in its path.
           { key: 'Referrer-Policy', value: 'same-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
         ],
+      },
+      {
+        // Every route but the relayed font files. A header set here wins over
+        // one a route handler sets, so the font route sets its own: immutable
+        // for a real file, no-store for a refusal. A 404 cached for a year
+        // would hide that file from the browser after a brand font change.
+        source: '/:path((?!fonts/file/).*)',
+        headers: [{ key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, private, max-age=0' }],
       },
       {
         // A claim page carries a single-use token in its path. `same-origin`
@@ -43,14 +55,9 @@ const nextConfig = {
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {
-        // The brand fonts relayed from Google (lib/fonts.js): the same bytes
-        // for every visitor, nothing about a patient. Google's file paths are
-        // versioned, so a file never changes; the stylesheet URL carries the
-        // theme version, so a font change reaches browsers at once.
-        source: '/fonts/file/:path*',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
-      },
-      {
+        // The stylesheet URL carries the theme version, so a font change
+        // reaches browsers at once. (The font files' caching is set by
+        // app/fonts/file/[...path]/route.js, see above.)
         source: '/fonts/stylesheet',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
       },

@@ -113,8 +113,32 @@ control that is guaranteed to fail.
 - No third-party script, font, or asset host on an authenticated page. The admin's Google Fonts
   stylesheet is relayed through this origin (`/fonts/stylesheet`, `/fonts/file/*`, `lib/fonts.js`):
   only `fonts.googleapis.com/css2?…` and font files under `fonts.gstatic.com` are fetched, and a
-  stylesheet that would still load anything from elsewhere is dropped whole. Theme > Custom CSS is
+  stylesheet that would still load anything from elsewhere is dropped whole. `/fonts/file/*`
+  relays only the files the brand's current stylesheet names; any other path is a 404 (`no-store`),
+  so it is not a free relay and cannot fill the shared cache. Theme > Custom CSS is
   applied only when it loads nothing (`url(`, `image-set(`, `@import`) and holds no `<` or `\`.
+- **The browser enforces that too** (`middleware.js`, `lib/securityHeaders.js`). Every page gets:
+  - `Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-<per request>';
+    style-src 'self' 'unsafe-inline'; img-src 'self' data: <admin origin>; font-src 'self';
+    connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`.
+    The middleware mints the nonce and puts the policy on the request as well as the response,
+    which is where the App Router reads the nonce it stamps on its own scripts. Styles keep
+    `'unsafe-inline'` because the theme tokens and Custom CSS are inline `<style>` and progress bars
+    use `style=""` (a nonce cannot cover an attribute, and a nonce in `style-src` would turn
+    `'unsafe-inline'` off). `img-src` names the admin's origin for the logo and favicon; `data:` is
+    the two-step QR code. `next dev` adds `'unsafe-eval'` to scripts; production never does.
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
+
+  A deployment extends a directive with `CSP_IMG_SRC`, `CSP_CONNECT_SRC`, `CSP_SCRIPT_SRC`,
+  `CSP_STYLE_SRC`, `CSP_FONT_SRC`, `CSP_FRAME_SRC`, `CSP_MEDIA_SRC` or `CSP_WORKER_SRC`
+  (space-separated hosts or schemes). Only hosts, schemes and `'wasm-unsafe-eval'` are accepted;
+  anything else (`'unsafe-inline'`, a `;`) is dropped and logged, so an env var cannot reopen inline
+  script. `PERMISSIONS_ALLOW="camera microphone"` turns those features on for this origin only, for
+  the day a video visit ships (with `CSP_FRAME_SRC`/`CSP_CONNECT_SRC` for its SDK). The middleware
+  sets headers only: it never reads the session, which the `(portal)` layout and each route handler
+  still check. Never add a `<script>` tag or `dangerouslySetInnerHTML` script; there is no nonce for
+  it to use.
 - **A signed cookie proves we minted it, not that the admin still honours it.** A claim revokes
   other sessions, so a validly signed cookie can hold a dead token. `/login` asks `/patient/auth/me`
   before bouncing to `/` — trusting the signature there was an inescapable

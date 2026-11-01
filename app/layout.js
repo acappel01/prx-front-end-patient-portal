@@ -2,7 +2,8 @@ import '@/public/scss/main.scss';
 
 import { deploymentConfig } from '@/lib/adminApi';
 import { fontStylesheetHref } from '@/lib/fonts';
-import { brandFavicon, brandName, customCss, themeStyle } from '@/lib/theme';
+import { warnIfImageBlocked } from '@/lib/securityHeaders';
+import { brandFavicon, brandLogo, brandName, customCss, themeStyle } from '@/lib/theme';
 
 /**
  * Universal shell.
@@ -13,6 +14,9 @@ import { brandFavicon, brandName, customCss, themeStyle } from '@/lib/theme';
  * rendering prescriptions. There is no script tag in this file and no
  * third-party host anywhere in this application: the admin's brand fonts are
  * relayed through this origin (lib/fonts.js), never linked from a font CDN.
+ * The Content-Security-Policy (middleware.js, lib/securityHeaders.js) enforces
+ * that in the browser: Next's own inline bootstrap carries the request's nonce,
+ * and nothing else may run.
  */
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +44,11 @@ export default async function RootLayout({ children }) {
   const fonts = fontStylesheetHref(config);
   const favicon = brandFavicon(config);
   const custom = customCss(config);
+
+  // A brand image from a host the policy does not name would silently not
+  // show; say so in the log instead.
+  warnIfImageBlocked(brandLogo(config)?.url, 'brand logo');
+  warnIfImageBlocked(favicon, 'favicon');
 
   return (
     <html lang="en" style={{ cssText: undefined }} data-app="portal" data-template={config?.theme?.frontend_template ?? 'default'}>
