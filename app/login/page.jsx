@@ -8,7 +8,8 @@ import { sessionToken } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 export default async function LoginPage({ searchParams }) {
-  const expired = (await searchParams)?.expired === '1';
+  // `1`: the idle limit ran out. `limit`: the session reached its absolute cap.
+  const expired = (await searchParams)?.expired;
 
   // A signed cookie is not a live session. The signature proves WE minted it;
   // only the admin knows whether the token inside was since revoked (a claim
@@ -19,7 +20,7 @@ export default async function LoginPage({ searchParams }) {
   // it needs no clearing here.
   //
   // This is the escape hatch, so it must always render: an unreachable admin
-  // (adminFetch throws on a network failure) shows the form, not a 500.
+  // (adminFetch answers `ok: false, status: 0`, never throws) shows the form.
   //
   // Do NOT copy this check into the (portal) layout. A call per page view is
   // an extra admin round-trip on every navigation and spends the patient's
@@ -27,21 +28,18 @@ export default async function LoginPage({ searchParams }) {
   // learn from their own 401s. (It used to sit behind the sign-in limiter too;
   // since 2026-09-13 it does not.)
   if (await sessionToken()) {
-    let live = false;
-    try {
-      live = (await adminFetch('/patient/auth/me')).ok;
-    } catch {
-      // Treat as not live; the form renders.
-    }
-
-    if (live) redirect('/');
+    if ((await adminFetch('/patient/auth/me')).ok) redirect('/');
   }
 
   return (
     <AccountShell>
-      {expired ? (
+      {expired === '1' ? (
         <p className="prx-notice" role="status">
           You were signed out after a period of inactivity, to keep your information safe. Sign in again to continue.
+        </p>
+      ) : expired === 'limit' ? (
+        <p className="prx-notice" role="status">
+          Your session reached its time limit, so you were signed out to keep your information safe. Sign in again to continue.
         </p>
       ) : null}
       <LoginForm />

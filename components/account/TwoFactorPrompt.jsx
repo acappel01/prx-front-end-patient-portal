@@ -18,7 +18,7 @@ export const DISMISS_COOKIE = 'prx_2fa_prompt';
 export default async function TwoFactorPrompt() {
   if ((await cookies()).get(DISMISS_COOKIE)?.value === 'dismissed') return null;
 
-  const result = await adminFetch('/patient/two-factor').catch(() => null);
+  const result = await adminFetch('/patient/two-factor');
   const status = result?.ok ? result.data : null;
 
   if (!status || status.enabled || !status.offered || status.policy !== 'optional') return null;

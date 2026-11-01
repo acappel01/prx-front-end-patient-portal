@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import Reference from '@/components/ui/Reference';
+import { afterPoll, pollDelay } from '@/lib/exportPoll';
 import { portalCall } from '@/lib/portalClient';
 
 /**
@@ -10,23 +11,26 @@ import { portalCall } from '@/lib/portalClient';
  * the page then checks every few seconds while it is open, and offers the
  * download when it is ready. The file streams through this app's own route,
  * because the provider's link needs a token the browser never holds.
+ *
+ * A failed check backs off and tries again; several in a row stop the polling
+ * and say so, with a way to check again (lib/exportPoll.js).
  */
-const POLL_MS = 5000;
 
 export default function ExportPanel() {
   const [exportId, setExportId] = useState(null);
   const [state, setState] = useState({ status: 'idle' });
 
   useEffect(() => {
-    if (!exportId || state.ready || state.status === 'failed') return undefined;
+    if (!exportId || state.ready || state.status === 'failed' || state.status === 'poll_failed') return undefined;
 
     const timer = setTimeout(async () => {
       const response = await portalCall(`/patient/export/${exportId}`);
 
-      if (response.ok && response.data) {
-        setState({ ...response.data, status: response.data.ready ? 'ready' : response.data.status });
-      }
-    }, POLL_MS);
+      // A 401 has already navigated away to sign in.
+      if (response.status === 401) return;
+
+      setState((current) => afterPoll(current, response));
+    }, pollDelay(state.failures, state.retryAfter));
 
     return () => clearTimeout(timer);
   }, [exportId, state]);
@@ -62,6 +66,22 @@ export default function ExportPanel() {
             Download my record
           </a>
         </p>
+      </div>
+    );
+  }
+
+  if (state.status === 'poll_failed') {
+    return (
+      <div className="prx-card" role="status">
+        <p className="prx-field__error">
+          We can&rsquo;t check on your copy right now. It may still be on its way; check again in a few minutes.
+        </p>
+        <p>
+          <button type="button" className="prx-task__cta" onClick={() => setState({ status: 'queued', failures: 0 })}>
+            Check again
+          </button>
+        </p>
+        <Reference id={state.reference ?? null} />
       </div>
     );
   }

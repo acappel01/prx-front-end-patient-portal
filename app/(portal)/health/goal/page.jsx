@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
  * care team sees the same number and Home's progress is measured against it.
  */
 export default async function GoalPage() {
-  const { ok, status, data, code, requestId } = await adminFetch('/patient/vitals/goals').catch(() => ({ ok: false, status: 0 }));
+  const { ok, status, data, code, requestId } = await adminFetch('/patient/vitals/goals');
 
   if (status === 401) redirect('/login');
   if (status === 403 && code === 'two_factor_setup_required') redirect('/record/security?required=1');

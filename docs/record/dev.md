@@ -42,12 +42,17 @@ rows, the page falls back to the order's own tracking.
 
 Each switch saves as soon as it changes, and the page says "Saved." in a live region. Turning the
 master switch off disables the channel switches but keeps their values, so turning it back on
-restores what the patient had.
+restores what the patient had. A rate-limited save says how long to wait instead of "couldn't
+save".
 
 ## Copy of the record
 
 The provider builds the file in the background. The panel asks once, then checks every five
-seconds until the file is ready. A second ask while one is being prepared returns the same
+seconds until the file is ready. A failed check (a 429, a 5xx, a dropped connection) is counted and
+the next check waits longer — doubling from five seconds to a one-minute cap, never sooner than a
+429's `Retry-After` — and after five failures in a row the panel stops, says it can't check right
+now, shows the Reference, and offers "Check again" (`lib/exportPoll.js`, tested in
+`scripts/resilience.test.mjs`). A 401 signs the patient in again through `portalCall()`. A second ask while one is being prepared returns the same
 export. The download goes through `app/api/export/[id]/route.js`, which streams the admin's
 response as an attachment named `my-health-record.json` with `no-store`, so the file never sits in
 a cache. The provider's own download URL is dropped by the admin and never reaches the browser.

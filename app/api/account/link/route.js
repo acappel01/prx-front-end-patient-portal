@@ -38,12 +38,10 @@ export async function POST(request) {
     return NextResponse.json({ message: 'Enter your email address.' }, { status: 422 });
   }
 
-  let result;
-  try {
-    result = await adminFetch(route, { method: 'POST', token: '', body: { email } });
-  } catch (error) {
-    // The route and reason only: never the address.
-    console.error(`[account/link] admin unreachable on ${route}: ${error?.message ?? error}`);
+  // adminFetch logs an unreachable admin with the route only: never the address.
+  const result = await adminFetch(route, { method: 'POST', token: '', body: { email } });
+
+  if (result.status === 0) {
     return NextResponse.json({ message: 'We could not reach the service. Please try again in a moment.' }, { status: 503 });
   }
 

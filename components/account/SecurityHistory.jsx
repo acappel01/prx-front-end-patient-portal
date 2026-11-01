@@ -64,9 +64,9 @@ function who(event) {
 }
 
 export default async function SecurityHistory() {
-  // adminFetch throws on a network failure rather than returning !ok; caught
-  // here so an unreachable admin hides this section, not the Record screen.
-  const response = await adminFetch(`/patient/security/events?limit=${LIMIT}`).catch(() => null);
+  // An unreachable admin is `!ok` (status 0) like any refusal, so it hides
+  // this section, not the Record screen.
+  const response = await adminFetch(`/patient/security/events?limit=${LIMIT}`);
 
   if (!response?.ok) return null;
 

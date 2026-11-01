@@ -47,6 +47,13 @@ an order and no account a create-account link, anything else nothing. The links 
   that tells anyone whether a named person is a patient. A 429 is shown as a rate limit, never
   as "did not match". The sign-in route did exactly that until 2026-09-13; the limiter is per network
   address, not per account, so naming it reveals nothing about who is a patient.
+- **Only a credential refusal is "did not match"** (`lib/signInRefusal.js`, used by
+  `app/api/session/route.js` and `app/api/session/two-factor/route.js`). The admin's bad-credential
+  answer is a 422 (a 401 is treated the same). A 5xx, a maintenance 503, a 404 from a wrong
+  `ADMIN_API_BASE_URL`, or a 200 without a session is "We couldn't sign you in right now" (503) with
+  the admin's Reference, and the route logs the status and request id — never the email or the
+  password. Before this, an outage told patients their password was wrong, and they retyped it into
+  the per-address limiter. On the code step, only a 422 is "that code didn't work".
 - **Never spend or even check the token on page load.** Both pages render a password form and
   ask the admin nothing until it is submitted; a validity check on load is a lookup any mail
   scanner could trigger.
@@ -116,10 +123,22 @@ control that is guaranteed to fail.
   navigation and spends the patient's per-account API budget (120/min) on what each screen already
   learns from its own 401. Screens under it turn a 401 into a link. (`/me` and logout left the
   per-IP sign-in limiter on 2026-09-13 — a 429'd logout used to leave the token alive.)
+- **Signing in again revokes the old token.** When a sign-in (or a create-account link) succeeds
+  while this browser still holds a session cookie, the route reads the old token first and, once the
+  response has gone (`revokeAfterResponse()` in `lib/adminApi.js`, Next's `after()`), calls the
+  admin's `POST /patient/auth/logout` with it. The same happens when the password step answers with
+  a two-step challenge, since that ends the old cookie too. A failed sign-in leaves the existing
+  session alone. Best effort: a token this cannot reach still ends at the admin's idle limit.
 - **Sessions end admin-side**: 30 minutes idle and 12 hours absolute by default (the admin's Settings →
   Patient portal). The cookie deliberately has no max-age of its own — a dead token is a 401 every
-  screen already handles. `components/shell/SessionTimeout.jsx` mirrors only the idle clock
-  (`config.portal.session.idle_minutes`) to warn two minutes before. A navigation, tap or keypress
+  screen already handles. `components/shell/SessionTimeout.jsx` warns two minutes before whichever
+  ends first. Every keep-alive answers with the session's own deadlines — `idle_expires_at` and the
+  absolute `expires_at` from the admin, plus `now` from this server's clock so a device clock that
+  is out does not move the warning (`lib/sessionClock.js`) — and one keep-alive on mount learns them;
+  nothing comes from `/config`. Near the idle limit it asks "Still there?" with Stay signed in. Near
+  the absolute cap nothing can extend the session, so it says the session is about to end and to
+  save what they are writing; Continue only dismisses it, and the cap lands on
+  `/login?expired=limit` with its own notice. A navigation, tap or keypress
   sends a quiet keep-alive (`GET /api/session` → admin `GET /patient/session`) whenever the admin has
   not heard from the tab for five minutes; the tab's clock moves only when a keep-alive succeeds, so a
   navigation to a screen that makes no admin call (`/connect`, `/health/log`, back/forward) cannot
@@ -164,12 +183,18 @@ control that is guaranteed to fail.
   CDN in front and the true client is no longer the rightmost entry: change the extraction and
   the admin's trusted proxies together.
 
+- **One browser header reaches the admin: `Idempotency-Key`** (`lib/idempotencyHeader.js`). The
+  proxy forwards it by name, on writes only, and only when it is a plain token
+  (`^[\x21-\x7E]{8,255}$`); every other browser header stays here. `VitalsForm` mints one key per
+  attempt (a new one after a 422 or a changed value), and the admin answers a repeated key with the
+  first result instead of writing a second reading.
+
 - **The patient can see their own sign-in activity** (Record, `components/account/SecurityHistory.jsx`,
   from `GET /patient/security/events`). It is a server component through `adminFetch`, so it has no
   proxy allowlist entry and no browser path. The admin's resource is a whitelist; this side filters
   nothing and must not add fields the admin withholds — above all, never distinguish "unknown
   address" from "wrong password" on a failed attempt. It renders nothing on an error response or a
-  network failure (it catches `adminFetch`'s throw), so the history never puts the Record screen
+  network failure (`adminFetch`'s status 0), so the history never puts the Record screen
   into an error state. On staff- or system-made changes the admin sends no IP or browser. Signing out records a
   `logout` event admin-side, which is one more reason `DELETE /api/session` must keep calling the
   admin rather than only clearing the cookie.

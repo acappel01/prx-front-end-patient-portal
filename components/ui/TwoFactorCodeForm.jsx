@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import Reference from '@/components/ui/Reference';
+
 /**
  * Enter the code from an authenticator app — or a recovery code.
  *
@@ -12,12 +14,15 @@ import { useState } from 'react';
 export default function TwoFactorCodeForm({ trustDays = 0 }) {
   const [useRecovery, setUseRecovery] = useState(false);
   const [error, setError] = useState(null);
+  // The admin's Reference when it could not sign anyone in (an outage, not a bad password).
+  const [reference, setReference] = useState(null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(event) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setReference(null);
 
     const form = new FormData(event.currentTarget);
     const value = form.get('code');
@@ -44,6 +49,7 @@ export default function TwoFactorCodeForm({ trustDays = 0 }) {
     }
 
     setError(payload?.message ?? 'Something went wrong. Please try again.');
+    setReference(payload?.request_id ?? null);
     setBusy(false);
   }
 
@@ -96,6 +102,7 @@ export default function TwoFactorCodeForm({ trustDays = 0 }) {
           {error}
         </p>
       ) : null}
+      <Reference id={reference} />
 
       <button type="submit" className="prx-task__cta prx-form__submit" disabled={busy}>
         {busy ? 'Checking…' : 'Continue'}

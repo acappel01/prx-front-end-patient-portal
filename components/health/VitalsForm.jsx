@@ -146,6 +146,12 @@ export default function VitalsForm() {
   // we can prevent outright, we prevent outright.
   const inFlight = useRef(false);
   const disclosureRef = useRef(null);
+  // One Idempotency-Key per attempt. A retry the network forced (the patient
+  // reloads and the browser resends, or a proxy repeats the POST) carries the
+  // same key, and the admin answers the first result instead of writing a
+  // second row. A 422 wrote nothing, and a changed value is a new reading, so
+  // both start a new attempt with a new key.
+  const attemptKey = useRef(null);
 
   // Declared here rather than beside the markup it drives: a `useEffect`
   // dependency array is evaluated at the call site, so a const declared
@@ -173,6 +179,7 @@ export default function VitalsForm() {
   }, [extrasNeedAttention, errors]);
 
   function set(name, value) {
+    attemptKey.current = null;
     setValues((current) => ({ ...current, [name]: value }));
   }
 
@@ -203,9 +210,11 @@ export default function VitalsForm() {
     // `recorded_at` is deliberately not sent: the provider does not accept it,
     // and every row is timestamped `created_at` at the moment it is saved.
 
+    attemptKey.current ??= crypto.randomUUID();
+
     const response = await fetch('/api/portal/patient/vitals', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': attemptKey.current },
       body: JSON.stringify(body),
     }).catch(() => null);
 
@@ -260,6 +269,7 @@ export default function VitalsForm() {
 
       setErrors(mapped);
       setBusy(false);
+      attemptKey.current = null;
       // Released only here. A 422 wrote nothing, so resubmitting is the right
       // thing; every other ending is terminal and keeps the guard closed.
       inFlight.current = false;

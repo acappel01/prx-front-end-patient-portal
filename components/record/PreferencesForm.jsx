@@ -36,7 +36,8 @@ export default function PreferencesForm({ initial }) {
     }
 
     setPrefs(previous);
-    setStatus('We couldn’t save that. Please try again.');
+    // A 429 carries the shared "wait N seconds" sentence; anything else is ours.
+    setStatus(response.status === 429 && response.message ? response.message : 'We couldn’t save that. Please try again.');
   }
 
   return (

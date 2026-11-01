@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import Reference from '@/components/ui/Reference';
+
 /**
  * Sign in.
  *
@@ -13,12 +15,15 @@ import { useState } from 'react';
 export default function LoginForm({ stayOnPage = false }) {
   const router = useRouter();
   const [error, setError] = useState(null);
+  // The admin's Reference when it could not sign anyone in (an outage, not a bad password).
+  const [reference, setReference] = useState(null);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(event) {
     event.preventDefault();
     setBusy(true);
     setError(null);
+    setReference(null);
 
     const form = new FormData(event.currentTarget);
 
@@ -35,6 +40,7 @@ export default function LoginForm({ stayOnPage = false }) {
       const payload = await response?.json().catch(() => null);
 
       setError(payload?.message ?? 'Something went wrong. Please try again.');
+      setReference(payload?.request_id ?? null);
       setBusy(false);
 
       return;
@@ -89,6 +95,7 @@ export default function LoginForm({ stayOnPage = false }) {
           {error}
         </p>
       ) : null}
+      <Reference id={reference} />
 
       <button type="submit" className="prx-task__cta prx-form__submit" disabled={busy}>
         {busy ? 'Signing in…' : 'Sign in'}

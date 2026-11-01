@@ -64,8 +64,8 @@ as `X-Forwarded-For`, is the one the admin records and rate-limits on.
 | `app/api/portal/[...path]/` | Same-origin proxy — **allowlisted**, never a passthrough. |
 | `app/api/intake/[id]/` | The one multipart upload (what a held visit needs): capped, whitelisted, rebuilt — see `security/dev.md` → Uploads. |
 | `app/api/export/[id]/` | Streams a ready copy of the record from the admin (`/patient/export/{id}/download`). Not a JSON relay, so outside the proxy. |
-| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (browser calls through the proxy), `approvalOutcome` (what an approval answer means), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
-| `scripts/*.test.mjs` | Unit tests for the pure helpers (`npm test`, Node's built-in runner, no dependencies). |
+| `lib/` | `adminApi`, `session`, `portalProxy`, `theme`, `fonts`, `destinations`, `landing` (server-only), `requestGuard` (origin, type and size checks for every write), `portalClient` (browser calls through the proxy), `approvalOutcome` (what an approval answer means), `signInRefusal` (what a failed sign-in says), `rateLimit` (the 429 sentence and `Retry-After`), `exportPoll` (the record-copy poll's backoff), `sessionClock` (the session's idle and absolute deadlines), `labs`, `accountErrors`, and `format` (money and word helpers for display). |
+| `scripts/*.test.mjs` | Unit tests (`npm test`, Node's built-in runner, no dependencies). The pure helpers are imported directly; `adminRoutes.test.mjs` runs route handlers and `adminApi` against a stubbed admin, with `scripts/support/hooks.mjs` resolving `@/` and stubbing `server-only`, `next/headers` and `next/server`. |
 | `components/stack/` | The action stack. Renders a ranked list; never ranks one. |
 | `public/scss/main.scss` | Mobile-first at 390 × 812. Desktop is a reflow of the same components. |
 

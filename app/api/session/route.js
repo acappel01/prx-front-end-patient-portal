@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { adminFetch } from '@/lib/adminApi';
+import { adminFetch, revokeAfterResponse } from '@/lib/adminApi';
 import { landingFor } from '@/lib/landing';
 import { guardRequest, readBody } from '@/lib/requestGuard';
-import { endSession, startChallenge, startSession, startTrustedDevice, trustedDeviceToken } from '@/lib/session';
+import { endSession, sessionToken, startChallenge, startSession, startTrustedDevice, trustedDeviceToken } from '@/lib/session';
+import { signInRefusal } from '@/lib/signInRefusal';
 
 /**
  * Sign in and out.
@@ -31,6 +32,10 @@ export async function POST(request) {
   // Read once: sent with the password, and re-set below if the admin renews it.
   const deviceToken = await trustedDeviceToken();
 
+  // Read before anything replaces it: a sign-in over an existing session
+  // revokes that session's token upstream once this one is in place.
+  const previousToken = await sessionToken();
+
   const result = await adminFetch('/patient/auth/login', {
     method: 'POST',
     // Explicitly no session token: this call mints one.
@@ -42,23 +47,13 @@ export async function POST(request) {
       // after checking the password, and only for this account.
       ...(deviceToken ? { trusted_device_token: deviceToken } : {}),
     },
-  }).catch(() => null);
-
-  if (!result) {
-    return NextResponse.json({ message: 'We couldn’t reach the server. Try again in a moment.' }, { status: 503 });
-  }
-
-  // The sign-in limiter is per network address, never per account, so saying
-  // so reveals nothing about whether the address belongs to a patient. Folding
-  // it into "did not match" sent people back to retype a correct password
-  // into a limiter that was still counting.
-  if (result.status === 429) {
-    return NextResponse.json({ message: 'Too many sign-in attempts from this network. Wait a minute, then try again.' }, { status: 429 });
-  }
+  });
 
   // Two-step verification on: no session yet. The challenge goes into its own
-  // short-lived cookie and the browser is told only to ask for the code.
+  // short-lived cookie and the browser is told only to ask for the code. The
+  // old session ends here, so it is revoked here too.
   if (result.ok && result.data?.two_factor_required && result.data?.challenge) {
+    revokeAfterResponse(previousToken);
     await endSession();
     await startChallenge(result.data.challenge);
 
@@ -66,12 +61,19 @@ export async function POST(request) {
   }
 
   if (!result.ok || !result.data?.token) {
-    // One message for a bad password and for an unknown address. Distinguishing
-    // them turns this endpoint into an account-existence oracle, which for a
-    // clinical service leaks that a named person is a patient.
-    return NextResponse.json({ message: 'Those details did not match.' }, { status: 401 });
+    // Only a credential refusal says "did not match"; an outage says so, with
+    // its Reference (lib/signInRefusal.js). A failed sign-in leaves any
+    // existing session alone.
+    const refusal = signInRefusal(result);
+    if (refusal.log) console.error(refusal.log);
+
+    return NextResponse.json(
+      { message: refusal.message, ...(refusal.requestId ? { request_id: refusal.requestId } : {}) },
+      { status: refusal.status }
+    );
   }
 
+  revokeAfterResponse(previousToken);
   await startSession(result.data.token);
 
   // A trusted browser skipped the code and the admin renewed its trust: extend
@@ -90,15 +92,17 @@ export async function POST(request) {
  * general limiter, never the sign-in limiter.
  */
 export async function GET() {
-  const result = await adminFetch('/patient/session').catch(() => null);
+  const result = await adminFetch('/patient/session');
 
-  if (!result) {
+  if (result.status === 0) {
     return NextResponse.json({ message: 'Unavailable.' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
-  // Deadlines only; the token never leaves this server.
+  // Deadlines only; the token never leaves this server. `now` is this
+  // server's clock, so the tab can count down against the admin's deadlines
+  // without trusting the device's own clock to agree with them.
   return NextResponse.json(
-    result.ok ? { data: result.data } : { message: result.message ?? 'Session ended.' },
+    result.ok ? { data: { ...result.data, now: new Date().toISOString() } } : { message: result.message ?? 'Session ended.' },
     { status: result.ok ? 200 : result.status, headers: { 'Cache-Control': 'no-store' } }
   );
 }
@@ -111,7 +115,7 @@ export async function DELETE(request) {
   // Best-effort revocation upstream; the local cookie is cleared either way.
   // A sign-out that leaves the cookie because the network hiccuped is the
   // worst possible outcome on a shared device.
-  await adminFetch('/patient/auth/logout', { method: 'POST' }).catch(() => null);
+  await adminFetch('/patient/auth/logout', { method: 'POST' });
   await endSession();
 
   return NextResponse.json({ data: { ok: true } });

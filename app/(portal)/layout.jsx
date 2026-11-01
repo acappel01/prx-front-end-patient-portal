@@ -29,7 +29,7 @@ export default async function PortalLayout({ children }) {
         <main className="prx-main">{children}</main>
       </div>
       <TabBar destinations={destinationsFor(config)} />
-      <SessionTimeout idleMinutes={config?.portal?.session?.idle_minutes} />
+      <SessionTimeout />
     </div>
   );
 }

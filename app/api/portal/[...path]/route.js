@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 
 import { adminFetch } from '@/lib/adminApi';
+import { idempotencyKeyFrom } from '@/lib/idempotencyHeader';
 import { isAllowed, safePath } from '@/lib/portalProxy';
+import { rateLimitReply } from '@/lib/rateLimit';
 import { LIMITS, guardRequest, readBody } from '@/lib/requestGuard';
 import { sessionToken } from '@/lib/session';
 
@@ -54,20 +56,30 @@ async function handle(request, context, method) {
     body = read.body;
   }
 
-  let result;
-  try {
-    result = await adminFetch(`${resolved}${search}`, { method, body, token });
-  } catch (error) {
-    // A timeout or reset on the way to the admin. The admin may have acted
-    // (an approval may have charged), so this is "we do not know", never a
-    // refusal: a named code the screens treat as uncertain, not a bodiless 500.
-    // The path only, never the query or body.
-    console.error(`[portal proxy] admin unreachable on ${method} ${resolved}: ${error?.name ?? 'error'}`);
+  // The only browser header passed on: a clinical write's Idempotency-Key, by
+  // name, and only when it is a plain token.
+  const idempotencyKey = method === 'GET' ? null : idempotencyKeyFrom(request.headers);
 
+  const result = await adminFetch(`${resolved}${search}`, { method, body, token, idempotencyKey });
+
+  if (result.status === 0) {
+    // A timeout or reset on the way to the admin (adminFetch logged the path).
+    // The admin may have acted (an approval may have charged), so this is "we
+    // do not know", never a refusal: a named code the screens treat as
+    // uncertain, not a bodiless 500.
     return NextResponse.json(
       { message: 'We could not reach the service, so we do not know whether that went through.', code: 'upstream_unreachable' },
       { status: 504 }
     );
+  }
+
+  if (result.status === 429) {
+    // The wait is passed on, and the message is the shared one, so a form that
+    // shows the answer's message tells the patient how long to wait instead of
+    // inviting a retry straight into the limiter.
+    const reply = rateLimitReply(result.retryAfter);
+
+    return NextResponse.json({ ...reply.body, ...(result.requestId ? { request_id: result.requestId } : {}) }, { status: 429, headers: reply.headers });
   }
 
   if (result.ok) {
