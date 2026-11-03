@@ -134,6 +134,14 @@ what the admin will charge). A 401 is a dead or expired session and every screen
   - `Strict-Transport-Security: max-age=31536000; includeSubDomains`.
   - `Permissions-Policy: camera=(), microphone=(), geolocation=()`.
 
+  **One route takes a card.** `/record/membership` (`PAYMENT_PATHS`) also lets each gateway's
+  documented hosts (`GATEWAY_SOURCES`, the storefront's list: Authorize.Net, Stripe, Square, NMI)
+  into `script-src`, `connect-src` and `frame-src`, and Square's styles and fonts, plus any
+  `PAYMENT_CSP_GATEWAY_HOSTS` (https hosts only, for an NMI reseller's Collect.js). No keyword is
+  ever added and every other page keeps the policy above. The card number is typed only into the
+  gateway's fields or Accept.js's unnamed inputs and never reaches this app or the admin; see
+  [Record](../record/dev.md#updating-the-card).
+
   A deployment extends a directive with `CSP_IMG_SRC`, `CSP_CONNECT_SRC`, `CSP_SCRIPT_SRC`,
   `CSP_STYLE_SRC`, `CSP_FONT_SRC`, `CSP_FRAME_SRC`, `CSP_MEDIA_SRC` or `CSP_WORKER_SRC`
   (space-separated hosts or schemes). Only hosts, schemes and `'wasm-unsafe-eval'` are accepted;

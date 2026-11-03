@@ -15,7 +15,7 @@ the patient's own token. Nothing here is stored in this app.
 | `/record/notifications` | a master switch and one switch per channel (email, text, in-app) | `GET` and `POST /patient/communication-preferences` | `app/(portal)/record/notifications/page.jsx`, `components/record/PreferencesForm.jsx` |
 | `/record/export` | ask for a copy of the record, then download it | `POST /patient/export`, `GET /patient/export/{id}`, `GET …/{id}/download` | `app/(portal)/record/export/page.jsx`, `components/record/ExportPanel.jsx`, `app/api/export/[id]/route.js` |
 | `/record/visits` | past visits, newest first | `GET /patient/encounters?per_page=50` | `app/(portal)/record/visits/page.jsx` |
-| `/record/membership` | each membership: price, next payment or end date, the card, a past-due notice, and Cancel or Undo | `GET /patient/memberships`, `POST /patient/memberships/{id}/cancel`, `POST …/{id}/resume` | `app/(portal)/record/membership/page.jsx`, `components/record/MembershipCard.jsx`, `components/record/MembershipLink.jsx` |
+| `/record/membership` | each membership: price, next payment or end date, the card and its expiry, past-due and expiring-card notices, Update card, and Cancel or Undo | `GET /patient/memberships`, `POST /patient/memberships/{id}/cancel`, `POST …/{id}/resume`, `GET …/{id}/gateway-config`, `POST …/{id}/card` | `app/(portal)/record/membership/page.jsx`, `components/record/MembershipCard.jsx`, `components/record/MembershipLink.jsx`, `components/payments/**`, `lib/payments/*`, `lib/paymentPage.js` |
 
 Browser calls go through `lib/portalClient.js` and the `/api/portal` proxy. Each write is listed
 in `lib/portalProxy.js`; anything not listed is refused before it leaves this app.
@@ -72,13 +72,41 @@ the patient stop it.
   ("Keep my membership") shows until that period ends.
 - Which button shows is the admin's `can_cancel` / `can_resume`; what cancel does (end of period,
   or now when past due) is the admin's `CancelMembershipAction`. This screen decides neither.
-- The card is shown by brand and last four only. Changing the card is not built yet.
+- The card is shown by brand, last four and expiry. When the admin says the card has expired, or
+  runs out before the next payment (`card.expired`, `card.expiring`, the same rule as its
+  `membership.card_expiring` email trigger), the screen says so; a past-due notice already asks
+  for a new card and adds that updating it retries the payment.
+
+### Updating the card
+
+**Update card** shows when the admin's `can_update_card` is true (active or past due).
+
+1. `PaymentFields` (`components/payments/`) asks the admin which gateway to tokenise against
+   (`GET /patient/memberships/{id}/gateway-config`: an account that takes recurring charges, with
+   room for the membership's price) and renders that gateway's own card form. The forms in
+   `components/payments/gateways/` and `lib/payments/` are a copy of the storefront's
+   (`components/checkout/gateways/`, `lib/payments/loadScript.js`, `lib/cardInput.js`), with the
+   portal's field classes. Keep the two in step; a fix to one belongs in both.
+2. The card is typed into the gateway's fields (Collect.js, Stripe, Square) or, for Authorize.Net,
+   into unnamed inputs handed straight to Accept.js. Only the token, brand, last four and expiry
+   are sent: `POST /patient/memberships/{id}/card` with `payment_method`.
+3. The admin stores the card and, when a payment is past due, charges it at once. The reply's
+   `meta.renewal` (`renewed`, `failed`, `lapsed`, or null) picks the confirmation line.
+
+**The payment policy.** Gateway scripts may load only on `/record/membership`
+(`lib/securityHeaders.js`, `PAYMENT_PATHS`, `GATEWAY_SOURCES`); see
+[Security](../security/dev.md). A client-side navigation keeps the policy the document first
+loaded with, so the root layout writes `data-payment-csp="on|off"` on `<html>` from the middleware's
+`x-payment-csp` request header (`lib/paymentPage.js`), and **Update card** on an "off" document
+reloads the page with `?update=<id>`, which reopens the form under the right policy. The Record
+link is a plain `<a>`, so it is a full load already.
 
 ## What to keep true
 
 - No clinical value in a URL or a log line. That is why terminology search is a POST with the
   term in the body: a GET would write "HIV" into the access log of this app and the admin.
 - A failed write here may offer "try again", because none of them moves money (cancelling and
-  undoing a membership charge nothing). Approvals are
+  undoing a membership charge nothing). Updating a membership's card may charge a past-due
+  payment, but the admin's renewal is idempotent, so trying again never charges twice. Approvals are
   the exception and never offer a retry after an uncertain outcome (see
   [Approvals](../approvals/dev.md)).
