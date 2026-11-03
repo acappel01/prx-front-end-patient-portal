@@ -1,7 +1,10 @@
 import '@/public/scss/main.scss';
 
+import { headers } from 'next/headers';
+
 import { deploymentConfig } from '@/lib/adminApi';
 import { fontStylesheetHref } from '@/lib/fonts';
+import { PAYMENT_CSP_ATTRIBUTE, PAYMENT_CSP_HEADER } from '@/lib/paymentPage';
 import { warnIfImageBlocked } from '@/lib/securityHeaders';
 import { brandFavicon, brandLogo, brandName, customCss, themeStyle } from '@/lib/theme';
 
@@ -44,6 +47,8 @@ export default async function RootLayout({ children }) {
   const fonts = fontStylesheetHref(config);
   const favicon = brandFavicon(config);
   const custom = customCss(config);
+  // Which policy the middleware served this document under (lib/paymentPage.js).
+  const paymentCsp = (await headers()).get(PAYMENT_CSP_HEADER) === 'on' ? 'on' : 'off';
 
   // A brand image from a host the policy does not name would silently not
   // show; say so in the log instead.
@@ -51,7 +56,12 @@ export default async function RootLayout({ children }) {
   warnIfImageBlocked(favicon, 'favicon');
 
   return (
-    <html lang="en" data-app="portal" data-template={config?.theme?.frontend_template ?? 'default'}>
+    <html
+      lang="en"
+      data-app="portal"
+      data-template={config?.theme?.frontend_template ?? 'default'}
+      {...{ [PAYMENT_CSP_ATTRIBUTE]: paymentCsp }}
+    >
       <head>
         {fonts ? <link rel="stylesheet" href={fonts} /> : null}
         {favicon ? <link rel="icon" href={favicon} /> : null}

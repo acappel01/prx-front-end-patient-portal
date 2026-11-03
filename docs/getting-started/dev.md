@@ -54,6 +54,7 @@ configured…` once. Pages still render.
 | `SESSION_SECRET` | Yes | Signs the session cookie. At least 32 bytes: `openssl rand -hex 32`. |
 | `ADMIN_API_TOKEN` | When the admin's **Require tokens** is on for **Public read** | An API client token from the admin (**Users & access > API clients**) with **Public read**, sent only on the anonymous `/config` read so the brand loads. Patient calls carry the patient's own session token instead. |
 | `PORTAL_URL` | Yes | This app's public origin, the only `Origin` a write is accepted from when the browser does not send `Sec-Fetch-Site: same-origin`. Same value as the admin's `PATIENT_PORTAL_URL`. |
+| `PAYMENT_CSP_GATEWAY_HOSTS` | No | Extra https hosts a gateway's card script loads from, on the card page (Record > Membership) only: an NMI reseller's Collect.js host. Comma- or space-separated; anything that is not an https host is dropped. |
 | `CSP_IMG_SRC`, `CSP_CONNECT_SRC`, `CSP_SCRIPT_SRC`, `CSP_STYLE_SRC`, `CSP_FONT_SRC`, `CSP_FRAME_SRC`, `CSP_MEDIA_SRC`, `CSP_WORKER_SRC` | No | Extra sources for that Content-Security-Policy directive, space-separated hosts or schemes (`lib/securityHeaders.js`). The usual one is `CSP_IMG_SRC` when brand uploads are served from a storage or CDN host rather than the admin. |
 | `PERMISSIONS_ALLOW` | No | Device features this origin may use, e.g. `camera microphone` (for a future video visit). Unset, camera, microphone and geolocation are off. |
 
